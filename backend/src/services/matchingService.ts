@@ -97,45 +97,52 @@ class MatchingService {
     // Étape 1: Récupération des infos entreprise si SIRET fourni
     if (criteria.entreprise?.siret) {
       console.log('🔍 Recherche entreprise avec SIRET:', criteria.entreprise.siret);
-      entreprise = await siretService.getEntrepriseBySiret(criteria.entreprise.siret);
-      
-      if (entreprise) {
-        console.log('✅ Entreprise trouvée:', {
-          nom: entreprise.denominationSociale,
-          secteur: entreprise.secteurActivite,
-          commune: entreprise.adresse.commune,
-          departement: entreprise.adresse.departement
-        });
+      try {
+        entreprise = await siretService.getEntrepriseBySiret(criteria.entreprise.siret);
         
-        // PRIORITÉ aux données de l'entreprise trouvée via SIRET
-        // Si secteur pas spécifié manuellement, utiliser celui de l'entreprise
-        if (!secteurActivite || secteurActivite.trim() === '') {
-          secteurActivite = entreprise.secteurActivite;
-          console.log('📊 Secteur récupéré depuis l\'entreprise:', secteurActivite);
-        }
-        
-        // Si localisation pas spécifiée manuellement, utiliser celle de l'entreprise
-        if (!localisation || (!localisation.commune && !localisation.departement && !localisation.codePostal)) {
-          localisation = {
+        if (entreprise) {
+          console.log('✅ Entreprise trouvée:', {
+            nom: entreprise.denominationSociale,
+            secteur: entreprise.secteurActivite,
             commune: entreprise.adresse.commune,
-            departement: entreprise.adresse.departement,
-            codePostal: entreprise.adresse.codePostal,
-            latitude: entreprise.coordonnees.latitude,
-            longitude: entreprise.coordonnees.longitude
-          };
-          console.log('📍 Localisation récupérée depuis l\'entreprise:', localisation);
+            departement: entreprise.adresse.departement
+          });
+          
+          // PRIORITÉ aux données de l'entreprise trouvée via SIRET
+          // Si secteur pas spécifié manuellement, utiliser celui de l'entreprise
+          if (!secteurActivite || secteurActivite.trim() === '') {
+            secteurActivite = entreprise.secteurActivite;
+            console.log('📊 Secteur récupéré depuis l\'entreprise:', secteurActivite);
+          }
+          
+          // Si localisation pas spécifiée manuellement, utiliser celle de l'entreprise
+          if (!localisation || (!localisation.commune && !localisation.departement && !localisation.codePostal)) {
+            localisation = {
+              commune: entreprise.adresse.commune,
+              departement: entreprise.adresse.departement,
+              codePostal: entreprise.adresse.codePostal,
+              latitude: entreprise.coordonnees.latitude,
+              longitude: entreprise.coordonnees.longitude
+            };
+            console.log('📍 Localisation récupérée depuis l\'entreprise:', localisation);
+          }
+        } else {
+          console.log('❌ Aucune entreprise trouvée pour le SIRET:', criteria.entreprise.siret);
+          suggestions.push(`SIRET ${criteria.entreprise.siret} non trouvé dans la base SIRENE. Vérifiez le numéro ou continuez avec le secteur spécifié manuellement.`);
         }
-      } else {
-        console.log('❌ Aucune entreprise trouvée pour le SIRET:', criteria.entreprise.siret);
-        suggestions.push('SIRET non trouvé. Vérifiez le numéro ou renseignez manuellement le secteur et la localisation.');
+      } catch (error) {
+        console.error('❌ Erreur lors de la recherche SIRET:', error);
+        suggestions.push(`Erreur lors de la recherche du SIRET ${criteria.entreprise.siret}. Continuons avec les données manuelles.`);
       }
     }
 
     // Vérification des critères obligatoires après traitement SIRET
     if (!secteurActivite || secteurActivite.trim() === '') {
       const errorMsg = 'Un secteur d\'activité doit être spécifié pour la recherche. ' + 
-                      (criteria.entreprise?.siret ? 'Le SIRET fourni ne permet pas de déterminer le secteur automatiquement.' : 
+                      (criteria.entreprise?.siret ? 
+                       'Le SIRET fourni ne permet pas de déterminer le secteur automatiquement. Veuillez sélectionner un secteur manuellement.' : 
                        'Veuillez sélectionner un secteur dans la liste.');
+      console.error('❌', errorMsg);
       throw new Error(errorMsg);
     }
 

@@ -65,7 +65,7 @@ const MatchingLycees: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="w-full px-6 py-8">
         
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
@@ -91,16 +91,28 @@ const MatchingLycees: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-600 mb-2">
                     SIRET (optionnel)
                   </label>
-                  <input
-                    type="text"
-                    value={criteria.entreprise?.siret || ''}
-                    onChange={(e) => setCriteria(prev => ({
-                      ...prev,
-                      entreprise: { ...prev.entreprise, siret: e.target.value }
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="78467169500015"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={criteria.entreprise?.siret || ''}
+                      onChange={(e) => setCriteria(prev => ({
+                        ...prev,
+                        entreprise: { ...prev.entreprise, siret: e.target.value }
+                      }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Saisissez le SIRET de votre entreprise"
+                    />
+                    {criteria.entreprise?.siret && criteria.entreprise.siret.length === 14 && (
+                      <div className="mt-2">
+                        <button
+                          onClick={handleSearch}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          🔍 Récupérer les données INSEE
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <div className="mt-2 text-xs text-gray-500">
                     💡 <strong>SIRETs de démonstration :</strong><br />
                     • 78467169500015 (Informatique - Paris)<br />
@@ -281,23 +293,111 @@ const MatchingLycees: React.FC = () => {
           <div className="space-y-6">
             {/* Informations sur l'entreprise */}
             {results.entreprise && (
-              <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  🏢 Entreprise trouvée
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-800 font-medium text-lg">
-                      {results.entreprise.denominationSociale}
-                    </p>
-                    <p className="text-blue-600 text-sm font-medium">
-                      Secteur: {results.entreprise.secteurActivite}
-                    </p>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-8 border border-blue-200">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                    🏢 Entreprise trouvée via API INSEE
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                      ✓ Données officielles
+                    </span>
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Informations principales */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        📋 Informations générales
+                      </h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dénomination sociale</label>
+                          <p className="text-xl font-bold text-gray-900 mt-1">
+                            {results.entreprise.denominationSociale}
+                          </p>
+                        </div>
+                        
+                                                 <div>
+                           <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">SIRET</label>
+                           <p className="text-lg font-mono text-gray-800 mt-1 bg-gray-50 px-3 py-1 rounded">
+                             {results.entreprise.siret}
+                           </p>
+                           <p className="text-xs text-gray-500 mt-1">
+                             SIREN: {results.entreprise.siret.substring(0, 9)}
+                           </p>
+                         </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Secteur d'activité</label>
+                          <p className="text-lg text-blue-700 font-semibold mt-1 bg-blue-50 px-3 py-2 rounded-lg">
+                            {results.entreprise.secteurActivite}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-600">
-                      📍 {results.entreprise.adresse?.commune}, {results.entreprise.adresse?.departement}
-                    </p>
+
+                  {/* Adresse et localisation */}
+                  <div className="space-y-4">
+                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        📍 Localisation
+                      </h4>
+                      <div className="space-y-3">
+                        {results.entreprise.adresse && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Localisation</label>
+                            <div className="mt-1 text-gray-800">
+                              <p className="text-lg font-semibold text-blue-600">
+                                {results.entreprise.adresse.codePostal} {results.entreprise.adresse.commune}
+                              </p>
+                              <p className="text-gray-600">
+                                {results.entreprise.adresse.departement}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {results.entreprise.coordonnees && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Coordonnées GPS</label>
+                            <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded font-mono">
+                              <p>Lat: {results.entreprise.coordonnees.latitude?.toFixed(4)}</p>
+                              <p>Lng: {results.entreprise.coordonnees.longitude?.toFixed(4)}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Informations supplémentaires */}
+                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        ℹ️ Informations
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm">
+                          ✅ Données INSEE officielles
+                        </div>
+                        <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm">
+                          🔄 Mise à jour en temps réel
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Source des données */}
+                <div className="mt-6 pt-4 border-t border-blue-200">
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">ℹ️</span>
+                      <span>Données provenant de l'API SIRENE officielle de l'INSEE</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Mise à jour en temps réel
+                    </div>
                   </div>
                 </div>
               </div>
@@ -359,6 +459,7 @@ const MatchingLycees: React.FC = () => {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

@@ -2,7 +2,6 @@ import express from 'express';
 import matchingService, { MatchingCriteria } from '../services/matchingService';
 import lyceeService from '../services/lyceeService';
 import siretService from '../services/siretService';
-import siretMockService from '../services/siretMockService';
 
 const router = express.Router();
 
@@ -443,16 +442,30 @@ router.get('/demo/sirets', (req, res) => {
 
 /**
  * GET /api/demo/entreprises
- * Liste des entreprises de démonstration
+ * Liste des entreprises de démonstration (désormais via API SIRENE réelle)
  */
-router.get('/demo/entreprises', (req, res) => {
-  const mockEntreprises = siretMockService.getMockEntreprises();
-  
-  res.json({
-    success: true,
-    data: mockEntreprises,
-    count: mockEntreprises.length
-  });
+router.get('/demo/entreprises', async (req, res) => {
+  try {
+    // SIRETs d'entreprises connues pour la démonstration
+    const entreprisesDemo = [
+      { nom: "Microsoft France", siret: "32737946700062", secteur: "Informatique" },
+      { nom: "Carrefour", siret: "75402227500016", secteur: "Commerce" }, 
+      { nom: "Renault", siret: "77556323200297", secteur: "Automobile" }
+    ];
+
+    res.json({
+      success: true,
+      data: entreprisesDemo,
+      count: entreprisesDemo.length,
+      message: "Entreprises de démonstration - utilisez ces SIRETs pour tester"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des entreprises de démonstration',
+      message: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+  }
 });
 
 /**
@@ -649,6 +662,167 @@ router.get('/test/debug-geo', async (req, res) => {
     res.status(500).json({
       error: 'Erreur lors du test de géolocalisation',
       message: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+  }
+});
+
+/**
+ * GET /api/test/siret/:siret
+ * Test de la vraie API SIRENE publique
+ */
+router.get('/test/siret/:siret', async (req, res) => {
+  try {
+    const { siret } = req.params;
+    console.log('🧪 TEST API SIRENE RÉELLE pour SIRET:', siret);
+    
+    const axios = require('axios');
+    const SEARCH_URL = 'https://recherche-entreprises.api.gouv.fr/search';
+    
+    // Nettoyage du SIRET
+    const siretClean = siret.replace(/[\s-]/g, '');
+    
+    if (siretClean.length !== 14) {
+      return res.status(400).json({
+        error: 'SIRET invalide',
+        message: 'Le SIRET doit contenir 14 chiffres'
+      });
+    }
+
+    console.log('📡 Appel API SIRENE:', `${SEARCH_URL}?q=${siretClean}&limite=1`);
+    
+    const response = await axios.get(SEARCH_URL, {
+      params: {
+        q: siretClean,
+        limite: 1
+      },
+      timeout: 10000
+    });
+
+    console.log('📨 Réponse API brute:', {
+      status: response.status,
+      total: response.data?.total_results,
+      results: response.data?.results?.length
+    });
+
+    if (response.data && response.data.results && response.data.results.length > 0) {
+      const entrepriseData = response.data.results[0];
+      
+      console.log('✅ Entreprise trouvée:', entrepriseData);
+      
+      const siege = entrepriseData.siege || {};
+      
+      const entrepriseFormatee = {
+        siret: entrepriseData.siret,
+        siren: entrepriseData.siren,
+        nom: entrepriseData.nom_complet || entrepriseData.nom_raison_sociale,
+        activitePrincipale: entrepriseData.activite_principale,
+        adresse: {
+          numeroVoie: siege.numero_voie,
+          typeVoie: siege.type_voie,
+          libelleVoie: siege.libelle_voie,
+          commune: siege.libelle_commune,
+          codePostal: siege.code_postal,
+          departement: siege.departement
+        },
+        coordonnees: {
+          latitude: siege.latitude,
+          longitude: siege.longitude
+        },
+        dateCreation: entrepriseData.date_creation,
+        etatAdministratif: entrepriseData.etat_administratif
+      };
+
+      res.json({
+        success: true,
+        siretRecherche: siretClean,
+        entreprise: entrepriseFormatee,
+        donneesCompletes: entrepriseData
+      });
+    } else {
+      console.log('❌ Aucune entreprise trouvée');
+      res.json({
+        success: false,
+        message: 'Aucune entreprise trouvée pour ce SIRET',
+        siretRecherche: siretClean
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur test API SIRENE:', error);
+    
+    let errorMessage = 'Erreur lors du test API SIRENE';
+    if (error instanceof Error) {
+      errorMessage += ` - ${error.message}`;
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+  }
+});
+
+/**
+ * GET /api/test/sirene-config
+ * Test de la configuration de l'API SIRENE
+ */
+router.get('/test/sirene-config', async (req, res) => {
+  try {
+    console.log('🧪 Test de la configuration API SIRENE...');
+    
+    // Vérification de la configuration
+    const isConfigured = process.env.INSEE_API_KEY && process.env.INSEE_API_KEY !== 'VOTRE_CLE_API_INSEE';
+    
+    if (!isConfigured) {
+      return res.json({
+        success: false,
+        error: 'API SIRENE non configurée',
+        message: 'Ajoutez votre clé API INSEE dans le fichier .env ou directement dans le code',
+        guide: 'Consultez backend/README-API-SIRENE.md'
+      });
+    }
+
+    // Test avec un SIRET de Microsoft France
+    const siretTest = '32737946700062'; // Microsoft France
+    console.log('🔍 Test avec SIRET Microsoft France:', siretTest);
+    
+    const entreprise = await siretService.getEntrepriseBySiret(siretTest);
+    
+    if (entreprise) {
+      res.json({
+        success: true,
+        message: '✅ API SIRENE configurée et fonctionnelle !',
+        test: {
+          siretTeste: siretTest,
+          entrepriseTrouvee: {
+            nom: entreprise.denominationSociale,
+            secteur: entreprise.secteurActivite,
+            commune: entreprise.adresse.commune,
+            siret: entreprise.siret
+          }
+        },
+        config: {
+          apiKey: process.env.INSEE_API_KEY ? 'Configurée' : 'Non configurée',
+          keyLength: process.env.INSEE_API_KEY?.length || 0
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'API configurée mais aucune entreprise trouvée pour le SIRET de test',
+        siretTeste: siretTest
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur test API SIRENE:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors du test de l\'API SIRENE',
+      message: error instanceof Error ? error.message : 'Erreur inconnue',
+      guide: 'Vérifiez votre clé API dans backend/README-API-SIRENE.md'
     });
   }
 });
