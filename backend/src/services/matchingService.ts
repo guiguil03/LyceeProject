@@ -107,25 +107,40 @@ class MatchingService {
           departement: entreprise.adresse.departement
         });
         
-        // Utiliser les données de l'entreprise si pas spécifiées manuellement
-        secteurActivite = secteurActivite || entreprise.secteurActivite;
-        localisation = localisation || {
-          commune: entreprise.adresse.commune,
-          departement: entreprise.adresse.departement,
-          codePostal: entreprise.adresse.codePostal,
-          latitude: entreprise.coordonnees.latitude,
-          longitude: entreprise.coordonnees.longitude
-        };
+        // PRIORITÉ aux données de l'entreprise trouvée via SIRET
+        // Si secteur pas spécifié manuellement, utiliser celui de l'entreprise
+        if (!secteurActivite || secteurActivite.trim() === '') {
+          secteurActivite = entreprise.secteurActivite;
+          console.log('📊 Secteur récupéré depuis l\'entreprise:', secteurActivite);
+        }
+        
+        // Si localisation pas spécifiée manuellement, utiliser celle de l'entreprise
+        if (!localisation || (!localisation.commune && !localisation.departement && !localisation.codePostal)) {
+          localisation = {
+            commune: entreprise.adresse.commune,
+            departement: entreprise.adresse.departement,
+            codePostal: entreprise.adresse.codePostal,
+            latitude: entreprise.coordonnees.latitude,
+            longitude: entreprise.coordonnees.longitude
+          };
+          console.log('📍 Localisation récupérée depuis l\'entreprise:', localisation);
+        }
+      } else {
+        console.log('❌ Aucune entreprise trouvée pour le SIRET:', criteria.entreprise.siret);
+        suggestions.push('SIRET non trouvé. Vérifiez le numéro ou renseignez manuellement le secteur et la localisation.');
       }
     }
 
-    // Vérification des critères obligatoires
-    if (!secteurActivite) {
-      throw new Error('Un secteur d\'activité doit être spécifié pour la recherche');
+    // Vérification des critères obligatoires après traitement SIRET
+    if (!secteurActivite || secteurActivite.trim() === '') {
+      const errorMsg = 'Un secteur d\'activité doit être spécifié pour la recherche. ' + 
+                      (criteria.entreprise?.siret ? 'Le SIRET fourni ne permet pas de déterminer le secteur automatiquement.' : 
+                       'Veuillez sélectionner un secteur dans la liste.');
+      throw new Error(errorMsg);
     }
 
-    console.log('🎯 Secteur d\'activité utilisé:', secteurActivite);
-    console.log('📍 Localisation utilisée:', localisation);
+    console.log('🎯 Secteur d\'activité final utilisé:', secteurActivite);
+    console.log('📍 Localisation finale utilisée:', localisation);
 
     // Étape 2: Recherche de TOUS les lycées correspondant au secteur d'activité
     console.log('🔍 ÉTAPE 1: Recherche par SECTEUR D\'ACTIVITÉ en priorité');
@@ -142,15 +157,27 @@ class MatchingService {
       const texteAnalyse = [
         lycee.nom_etablissement,
         lycee.type_etablissement,
-        ...lycee.formations
+        // Les formations sont souvent vides dans l'API, on ne les utilise qu'en bonus
+        ...(lycee.formations || [])
       ].join(' ').toLowerCase();
       
-      const correspondance = motsClesSecteur.some(motCle => 
-        texteAnalyse.includes(motCle.toLowerCase())
-      );
+      console.log(`🔍 Analyse lycée: ${lycee.nom_etablissement}`);
+      console.log(`📄 Texte analysé: "${texteAnalyse.substring(0, 200)}..."`);
+      console.log(`📚 Formations disponibles (${lycee.formations.length}):`, lycee.formations.slice(0, 3));
+      console.log(`🔎 Recherche mots-clés:`, motsClesSecteur);
+      
+      const correspondance = motsClesSecteur.some(motCle => {
+        const found = texteAnalyse.includes(motCle.toLowerCase());
+        if (found) {
+          console.log(`✅ CORRESPONDANCE trouvée avec mot-clé: "${motCle}"`);
+        }
+        return found;
+      });
       
       if (correspondance) {
-        console.log(`✅ Lycée compatible secteur ${secteurActivite}:`, lycee.nom_etablissement, '-', lycee.libelle_commune);
+        console.log(`✅ Lycée RETENU pour secteur ${secteurActivite}:`, lycee.nom_etablissement, '-', lycee.libelle_commune);
+      } else {
+        console.log(`❌ Lycée REJETÉ:`, lycee.nom_etablissement, '- aucune correspondance trouvée');
       }
       
       return correspondance;
@@ -160,7 +187,34 @@ class MatchingService {
     criteresUtilises.push(`Secteur: ${secteurActivite} (${lyceesAvecSecteur.length} lycées)`);
 
     if (lyceesAvecSecteur.length === 0) {
-      suggestions.push(`Aucun lycée spécialisé en ${secteurActivite} trouvé. Vérifiez l'orthographe ou essayez un secteur similaire.`);
+      console.log('⚠️ Aucun lycée trouvé par filtrage strict, essayons un filtrage plus souple...');
+      
+      // Filtrage plus souple : chercher juste "lycée" + "professionnel" + termes génériques
+      const lyceesGeneral = tousLycees.filter(lycee => {
+        const texte = [lycee.nom_etablissement, lycee.type_etablissement].join(' ').toLowerCase();
+        return (texte.includes('lycée') || texte.includes('professionnel') || 
+                texte.includes('technique') || texte.includes('technologique'));
+      });
+      
+      console.log(`📚 Lycées généraux trouvés: ${lyceesGeneral.length}`);
+      
+      if (lyceesGeneral.length > 0) {
+        suggestions.push(`Aucun lycée spécialisé en ${secteurActivite} trouvé. Affichage des lycées professionnels de la zone.`);
+        return {
+          entreprise: entreprise || undefined,
+          matches: this.calculateMatches(
+            lyceesGeneral.slice(0, criteria.preferences?.nombreResultats || 10),
+            entreprise,
+            secteurActivite,
+            localisation,
+            criteria.preferences
+          ),
+          criteresUtilises: [...criteresUtilises, 'Élargi aux lycées professionnels généraux'],
+          suggestions
+        };
+      }
+      
+      suggestions.push(`Aucun lycée trouvé. Essayez d'élargir la zone géographique ou vérifiez l'orthographe.`);
       return {
         entreprise: entreprise || undefined,
         matches: [],
@@ -217,8 +271,15 @@ class MatchingService {
         suggestions.push(`Aucun lycée spécialisé en ${secteurActivite} trouvé dans votre zone. Résultats élargis géographiquement.`);
         criteresUtilises.push('Zone élargie (pas de correspondance locale)');
       } else {
-        criteresUtilises.push(`Zone: ${localisation.commune || localisation.departement || 'coordonnées GPS'}`);
+        if (localisation.latitude && localisation.longitude && criteria.preferences?.distanceMax) {
+          criteresUtilises.push(`Zone: ${criteria.preferences.distanceMax}km autour de l'entreprise`);
+        } else {
+          criteresUtilises.push(`Zone: ${localisation.commune || localisation.departement || 'coordonnées GPS'}`);
+        }
       }
+    } else {
+      console.log('⚠️ Aucune localisation fournie, tri par pertinence générale');
+      suggestions.push('Aucune localisation spécifiée. Résultats triés par pertinence générale.');
     }
 
     // Étape 4: Filtrage par type d'établissement
@@ -252,6 +313,12 @@ class MatchingService {
 
     if (matchesLimites.length === 0) {
       suggestions.push('Essayez d\'élargir vos critères de recherche (distance, type d\'établissement)');
+    } else {
+      if (localisation && localisation.latitude && localisation.longitude) {
+        suggestions.push(`${matchesLimites.length} lycées trouvés. Les résultats sont triés par spécialisation et proximité.`);
+      } else {
+        suggestions.push(`${matchesLimites.length} lycées trouvés. Spécifiez une localisation pour un tri géographique optimal.`);
+      }
     }
 
     return {

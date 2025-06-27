@@ -9,39 +9,6 @@ const router = express.Router();
 // Route principale pour le frontend
 router.post('/matching', async (req, res) => {
   try {
-    console.log('Requete de matching recue:', req.body);
-    const criteria = req.body;
-    if (!criteria.entreprise?.siret && !criteria.entreprise?.secteurActivite) {
-      return res.status(400).json({
-        error: 'Veuillez fournir au minimum un SIRET ou un secteur d activite'
-      });
-    }
-    const result = await matchingService.findMatchingLycees(criteria);
-    console.log('Resultat du matching:', result.matches?.length || 0, 'lycees trouves');
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    console.error('Erreur lors du matching:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la recherche des lycees correspondants',
-      message: error instanceof Error ? error.message : 'Erreur inconnue'
-    });
-  }
-});
-
-
-// ================================
-// ROUTE PRINCIPALE POUR LE MATCHING (utilisée par le frontend)
-// ================================
-
-/**
- * POST /api/matching
- * Route principale utilisée par le frontend pour le matching
- */
-router.post('/matching', async (req, res) => {
-  try {
     console.log('🔍 Requête de matching reçue:', req.body);
     
     const criteria: MatchingCriteria = req.body;
@@ -681,6 +648,72 @@ router.get('/test/debug-geo', async (req, res) => {
     console.error('Erreur test debug geo:', error);
     res.status(500).json({
       error: 'Erreur lors du test de géolocalisation',
+      message: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
+  }
+});
+
+// ================================
+// ROUTE DE DEBUG POUR LES LYCÉES
+// ================================
+
+/**
+ * GET /api/debug/lycees
+ * Debug : voir les lycées disponibles
+ */
+router.get('/debug/lycees', async (req, res) => {
+  try {
+    console.log('🔍 DEBUG: Récupération de tous les lycées...');
+    const lycees = await lyceeService.searchLycees({});
+    
+    console.log(`📚 Total lycées trouvés: ${lycees.length}`);
+    
+    // Afficher les premiers lycées pour debug
+    const debugInfo = lycees.slice(0, 5).map(lycee => ({
+      nom: lycee.nom_etablissement,
+      type: lycee.type_etablissement,
+      commune: lycee.libelle_commune,
+      departement: lycee.libelle_departement,
+      formations: lycee.formations.slice(0, 10), // Limiter pour ne pas surcharger
+      totalFormations: lycee.formations.length,
+      texteAnalyse: [lycee.nom_etablissement, lycee.type_etablissement, ...lycee.formations].join(' ').toLowerCase().substring(0, 300)
+    }));
+    
+    console.log('🏫 Premiers lycées:', debugInfo);
+    
+    res.json({
+      success: true,
+      data: {
+        total: lycees.length,
+        premier5: debugInfo,
+        secteurs: {
+          informatique: lycees.filter(l => 
+            [l.nom_etablissement, l.type_etablissement, ...l.formations]
+              .join(' ').toLowerCase()
+              .includes('informatique')
+          ).length,
+          commerce: lycees.filter(l => 
+            [l.nom_etablissement, l.type_etablissement, ...l.formations]
+              .join(' ').toLowerCase()
+              .includes('commerce')
+          ).length,
+          technique: lycees.filter(l => 
+            [l.nom_etablissement, l.type_etablissement, ...l.formations]
+              .join(' ').toLowerCase()
+              .includes('technique')
+          ).length,
+          professionnel: lycees.filter(l => 
+            [l.nom_etablissement, l.type_etablissement, ...l.formations]
+              .join(' ').toLowerCase()
+              .includes('professionnel')
+          ).length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur debug lycées:', error);
+    res.status(500).json({
+      error: 'Erreur lors du debug des lycées',
       message: error instanceof Error ? error.message : 'Erreur inconnue'
     });
   }

@@ -43,7 +43,7 @@ class LyceeService {
     try {
       const queryParams = new URLSearchParams({
         dataset: this.dataset,
-        rows: '50',
+        rows: '100',
         facet: ['code_postal_uai', 'localite_acheminement_uai', 'libelle_commune', 'libelle_departement', 'libelle_region', 'libelle_academie'].join(',')
       });
 
@@ -153,9 +153,9 @@ class LyceeService {
       
       // Mapping des secteurs vers les formations courantes
       const secteurFormations: { [key: string]: string[] } = {
-        'informatique': ['informatique', 'numérique', 'système', 'réseau', 'développement', 'digital', 'sio', 'snir'],
-        'commerce': ['commerce', 'vente', 'marketing', 'gestion', 'accueil', 'relation client'],
-        'industrie': ['industriel', 'mécanique', 'électrique', 'maintenance', 'production', 'usinage'],
+        'informatique': ['informatique', 'numérique', 'système', 'réseau', 'développement', 'digital', 'sio', 'snir', 'technologique', 'technique'],
+        'commerce': ['commerce', 'vente', 'marketing', 'gestion', 'accueil', 'relation client', 'commercial', 'magasin', 'vendeur'],
+        'industrie': ['industriel', 'mécanique', 'électrique', 'maintenance', 'production', 'usinage', 'technique'],
         'batiment': ['bâtiment', 'construction', 'travaux publics', 'génie civil', 'maçonnerie', 'menuiserie'],
         'restauration': ['restauration', 'hôtellerie', 'cuisine', 'service', 'tourisme', 'cshcr'],
         'transport': ['transport', 'logistique', 'conduite', 'automobile', 'maintenance véhicule'],
@@ -165,7 +165,7 @@ class LyceeService {
       const motsClesSecteur = secteurFormations[secteur.toLowerCase()] || [secteur];
       console.log('🔎 Mots-clés recherchés:', motsClesSecteur);
       
-      // Filtrer les lycées par secteur (recherche dans les noms et formations)
+      // Filtrer les lycées par secteur (recherche dans TOUS les champs riches)
       const lyceesFilters = allLycees.filter(lycee => {
         const texteAAnalyser = [
           lycee.nom_etablissement,
@@ -209,45 +209,82 @@ class LyceeService {
     
     return {
       numero_uai: fields.numero_uai || '',
-      nom_etablissement: fields.nom_etablissement || '',
+      nom_etablissement: fields.appellation_officielle || fields.nom_etablissement || '',
       type_etablissement: fields.type_etablissement || '',
-      statut_public_prive: fields.statut_public_prive || '',
-      adresse_1: fields.adresse_1 || '',
+      statut_public_prive: this.formatStatut(fields.secteur),
+      adresse_1: fields.adresse_uai || fields.adresse_1 || '',
       code_postal_uai: fields.code_postal_uai || '',
       localite_acheminement_uai: fields.localite_acheminement_uai || '',
       libelle_commune: fields.libelle_commune || '',
       libelle_departement: fields.libelle_departement || '',
       libelle_region: fields.libelle_region || '',
       libelle_academie: fields.libelle_academie || '',
-      latitude: fields.latitude || 0,
-      longitude: fields.longitude || 0,
+      latitude: fields.position?.lat || fields.latitude || 0,
+      longitude: fields.position?.lon || fields.longitude || 0,
       telephone: fields.telephone || '',
       fax: fields.fax || '',
       web: fields.web || '',
-      mail: fields.mail || '',
+      mail: this.formatMail(fields.mail_bde),
       formations: this.extractFormations(fields)
     };
   }
 
   /**
-   * Extrait les formations disponibles depuis les données
+   * Formate le statut public/privé
+   */
+  private formatStatut(secteur: string): string {
+    if (!secteur) return '';
+    return secteur === 'public' ? 'Public' : 'Privé';
+  }
+
+  /**
+   * Formate l'email depuis le tableau mail_bde
+   */
+  private formatMail(mailBde: string[] | string): string {
+    if (!mailBde) return '';
+    if (Array.isArray(mailBde)) {
+      return mailBde[0] || '';
+    }
+    return mailBde;
+  }
+
+  /**
+   * Extrait les formations depuis les VRAIS champs de l'API
    */
   private extractFormations(fields: any): string[] {
-    // Cette méthode peut être étendue selon la structure exacte des données
     const formations: string[] = [];
     
-    // Recherche dans différents champs possibles
-    const formationFields = ['formations', 'specialites', 'options', 'filiere'];
+    console.log('🔍 Extraction formations pour:', fields.appellation_officielle);
+    console.log('📚 Champs disponibles:', Object.keys(fields));
     
-    formationFields.forEach(field => {
-      if (fields[field]) {
-        if (Array.isArray(fields[field])) {
-          formations.push(...fields[field]);
-        } else {
-          formations.push(fields[field]);
-        }
-      }
-    });
+    // Diplômes préparés (séparés par |)
+    if (fields.diplomes_prepares) {
+      console.log('🎓 Diplômes bruts:', fields.diplomes_prepares);
+      const diplomes = fields.diplomes_prepares.split('|').map((d: string) => d.trim());
+      formations.push(...diplomes);
+      console.log('🎓 Diplômes extraits:', diplomes.length, 'diplômes');
+    } else {
+      console.log('❌ Pas de diplomes_prepares trouvé');
+    }
+    
+    // Métiers préparés (séparés par |) - CORRECTION ICI
+    if (fields.metiers_prepares) {
+      console.log('💼 Métiers bruts:', fields.metiers_prepares.substring(0, 200) + '...');
+      const metiers = fields.metiers_prepares.split('|').map((m: string) => m.trim());
+      formations.push(...metiers);
+      console.log('💼 Métiers extraits:', metiers.length, 'métiers');
+    } else {
+      console.log('❌ Pas de metiers_prepares trouvé');
+    }
+    
+    // Ajout de l'appellation officielle qui contient souvent des infos sur les métiers
+    if (fields.appellation_officielle) {
+      formations.push(fields.appellation_officielle);
+      console.log('🏫 Appellation ajoutée:', fields.appellation_officielle);
+    }
+
+    console.log('✅ Total formations extraites:', formations.length);
+    console.log('📋 Quelques formations:', formations.slice(0, 5));
 
     return [...new Set(formations)]; // Suppression des doublons
   }
