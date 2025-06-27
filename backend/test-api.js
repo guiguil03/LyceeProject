@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const token = '1f5d7399-a97a-39b4-b82c-183965acf1ac';
-const siret = '32737946700062'; // Microsoft France - SIRET réel
+const siret = '13002602400054'; // Université Paris-Saclay - SIRET de votre capture
 
 console.log('🔍 Test API INSEE...');
 console.log('Token:', token.substring(0, 8) + '...');
@@ -16,18 +16,19 @@ axios.get(`https://api.insee.fr/entreprises/sirene/V3.11/siret/${siret}`, {
 .then(response => {
   console.log('✅ Succès! Statut:', response.status);
   
+  // Affichage de la structure complète pour debug
+  console.log('\n📋 Structure complète de la réponse:');
+  console.log(JSON.stringify(response.data, null, 2));
+  
   if (response.data?.etablissement) {
     const etab = response.data.etablissement;
-    const uniteLegale = etab.uniteLegale || {};
+    console.log('\n🏢 Informations établissement:');
+    console.log('Clés disponibles:', Object.keys(etab));
     
-    console.log('🏢 Entreprise trouvée:');
-    console.log('  SIRET:', etab.siret);
-    console.log('  Nom:', uniteLegale.denominationUniteLegale || etab.denominationUsuelleEtablissement);
-    console.log('  Commune:', etab.libelleCommuneEtablissement);
-    console.log('  Code Postal:', etab.codePostalEtablissement);
-    console.log('  NAF:', etab.activitePrincipaleEtablissement);
-    console.log('  État:', etab.etatAdministratifEtablissement);
-    console.log('  Adresse:', etab.numeroVoieEtablissement, etab.typeVoieEtablissement, etab.libelleVoieEtablissement);
+    if (etab.uniteLegale) {
+      console.log('\n🏛️ Informations unité légale:');
+      console.log('Clés disponibles:', Object.keys(etab.uniteLegale));
+    }
   }
 })
 .catch(err => {

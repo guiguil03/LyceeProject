@@ -105,23 +105,27 @@ class SiretService {
         const etab = response.data.etablissement;
         const uniteLegale = etab.uniteLegale || {};
         
+        // Récupération de l'activité principale depuis les périodes
+        const activitePrincipale = etab.periodesEtablissement?.[0]?.activitePrincipaleEtablissement || 
+                                  etab.uniteLegale?.activitePrincipaleUniteLegale;
+        
         console.log('✅ Données INSEE reçues:', {
           siret: etab.siret,
-          nom: uniteLegale.denominationUniteLegale || etab.denominationUsuelleEtablissement,
-          commune: etab.libelleCommuneEtablissement,
-          naf: etab.activitePrincipaleEtablissement,
-          etat: etab.etatAdministratifEtablissement
+          nom: uniteLegale.denominationUniteLegale,
+          commune: etab.adresseEtablissement?.libelleCommuneEtablissement,
+          codeNAF: activitePrincipale,
+          etat: uniteLegale.etatAdministratifUniteLegale
         });
 
-        const secteurActivite = this.getSecteurActiviteFromNaf(etab.activitePrincipaleEtablissement);
+        const secteurActivite = this.getSecteurActiviteFromNaf(activitePrincipale);
 
         const adresse = {
-          numeroVoie: etab.numeroVoieEtablissement || '',
-          typeVoie: etab.typeVoieEtablissement || '',
-          libelleVoie: etab.libelleVoieEtablissement || '',
-          commune: etab.libelleCommuneEtablissement || '',
-          codePostal: etab.codePostalEtablissement || '',
-          departement: etab.libelleCommuneEtablissement || ''
+          numeroVoie: etab.adresseEtablissement?.numeroVoieEtablissement || '',
+          typeVoie: etab.adresseEtablissement?.typeVoieEtablissement || '',
+          libelleVoie: etab.adresseEtablissement?.libelleVoieEtablissement || '',
+          commune: etab.adresseEtablissement?.libelleCommuneEtablissement || '',
+          codePostal: etab.adresseEtablissement?.codePostalEtablissement || '',
+          departement: etab.adresseEtablissement?.libelleCommuneEtablissement || ''
         };
 
         const coordonnees = await this.getCoordinatesFromAddress(adresse);
@@ -138,7 +142,7 @@ class SiretService {
           coordonnees: coordonnees,
           dateCreation: etab.dateCreationEtablissement || '',
           statutDiffusion: etab.statutDiffusionEtablissement || 'O',
-          etatAdministratif: etab.etatAdministratifEtablissement || 'A'
+          etatAdministratif: uniteLegale.etatAdministratifUniteLegale || 'A'
         };
       }
 
@@ -246,78 +250,190 @@ class SiretService {
   private getSecteurActiviteFromNaf(codeNaf: string): string {
     if (!codeNaf) return 'Non spécifié';
     
+    console.log('🔍 Analyse code NAF:', codeNaf);
+    
+    // Mapping complet des codes NAF vers les secteurs d'activité
     const secteurs: { [key: string]: string } = {
-      // Informatique et télécommunications
-      '62': 'Informatique',
-      '63': 'Informatique',
-      '58': 'Informatique',
-      '61': 'Télécommunications',
+      // Agriculture, sylviculture et pêche (01-03)
+      '01': 'Agriculture',
+      '02': 'Agriculture',
+      '03': 'Agriculture',
       
-      // Commerce
-      '45': 'Commerce',
-      '46': 'Commerce',
-      '47': 'Commerce',
+      // Industries extractives (05-09)
+      '05': 'Industrie',
+      '06': 'Industrie',
+      '07': 'Industrie',
+      '08': 'Industrie',
+      '09': 'Industrie',
       
-      // Construction
-      '41': 'BTP',
-      '42': 'BTP',
-      '43': 'BTP',
-      
-      // Transport
-      '49': 'Transport',
-      '50': 'Transport',
-      '51': 'Transport',
-      '52': 'Transport',
-      '53': 'Transport',
-      
-      // Industrie
-      '10': 'Industrie',
-      '11': 'Industrie',
+      // Industries manufacturières (10-33)
+      '10': 'Industrie alimentaire',
+      '11': 'Industrie alimentaire',
       '12': 'Industrie',
-      '13': 'Industrie',
-      '14': 'Industrie',
-      '15': 'Industrie',
-      '16': 'Industrie',
+      '13': 'Textile',
+      '14': 'Textile',
+      '15': 'Textile',
+      '16': 'Industrie du bois',
       '17': 'Industrie',
-      '18': 'Industrie',
-      '19': 'Industrie',
-      '20': 'Industrie',
-      '21': 'Industrie',
+      '18': 'Imprimerie',
+      '19': 'Industrie chimique',
+      '20': 'Industrie chimique',
+      '21': 'Industrie pharmaceutique',
       '22': 'Industrie',
       '23': 'Industrie',
-      '24': 'Industrie',
-      '25': 'Industrie',
-      '26': 'Industrie',
-      '27': 'Industrie',
-      '28': 'Industrie',
-      '29': 'Industrie',
-      '30': 'Industrie',
+      '24': 'Métallurgie',
+      '25': 'Métallurgie',
+      '26': 'Informatique',
+      '27': 'Industrie électrique',
+      '28': 'Industrie mécanique',
+      '29': 'Automobile',
+      '30': 'Transport',
       '31': 'Industrie',
       '32': 'Industrie',
       '33': 'Industrie',
       
-      // Services
-      '64': 'Banque',
+      // Production et distribution d'électricité, de gaz, de vapeur et d'air conditionné (35)
+      '35': 'Énergie',
+      
+      // Production et distribution d'eau; assainissement, gestion des déchets et dépollution (36-39)
+      '36': 'Environnement',
+      '37': 'Environnement',
+      '38': 'Environnement',
+      '39': 'Environnement',
+      
+      // Construction (41-43)
+      '41': 'BTP',
+      '42': 'BTP',
+      '43': 'BTP',
+      
+      // Commerce; réparation d'automobiles et de motocycles (45-47)
+      '45': 'Commerce automobile',
+      '46': 'Commerce de gros',
+      '47': 'Commerce de détail',
+      
+      // Transports et entreposage (49-53)
+      '49': 'Transport terrestre',
+      '50': 'Transport maritime',
+      '51': 'Transport aérien',
+      '52': 'Logistique',
+      '53': 'Services postaux',
+      
+      // Hébergement et restauration (55-56)
+      '55': 'Hôtellerie',
+      '56': 'Restauration',
+      
+      // Information et communication (58-63)
+      '58': 'Édition et médias',
+      '59': 'Audiovisuel',
+      '60': 'Télécommunications',
+      '61': 'Télécommunications',
+      '62': 'Informatique',
+      '63': 'Informatique',
+      
+      // Activités financières et d'assurance (64-66)
+      '64': 'Banque et finance',
       '65': 'Assurance',
-      '66': 'Banque',
+      '66': 'Activités financières',
+      
+      // Activités immobilières (68)
       '68': 'Immobilier',
-      '69': 'Services',
-      '70': 'Services',
-      '71': 'Services',
-      '72': 'Services',
-      '73': 'Services',
-      '74': 'Services',
-      '75': 'Services',
+      
+      // Activités spécialisées, scientifiques et techniques (69-75)
+      '69': 'Conseil juridique',
+      '70': 'Conseil en entreprise',
+      '71': 'Architecture et ingénierie',
+      '72': 'Recherche et développement',
+      '73': 'Publicité et marketing',
+      '74': 'Services spécialisés',
+      '75': 'Services vétérinaires',
+      
+      // Activités de services administratifs et de soutien (77-82)
       '77': 'Services',
-      '78': 'Services',
-      '79': 'Services',
-      '80': 'Services',
-      '81': 'Services',
-      '82': 'Services'
+      '78': 'Emploi et ressources humaines',
+      '79': 'Tourisme',
+      '80': 'Sécurité',
+      '81': 'Services aux bâtiments',
+      '82': 'Services administratifs',
+      
+      // Administration publique (84)
+      '84': 'Administration publique',
+      
+      // Enseignement (85)
+      '85': 'Enseignement',
+      
+      // Santé humaine et action sociale (86-88)
+      '86': 'Santé',
+      '87': 'Médico-social',
+      '88': 'Action sociale',
+      
+      // Arts, spectacles et activités récréatives (90-93)
+      '90': 'Arts et spectacles',
+      '91': 'Culture',
+      '92': 'Jeux et paris',
+      '93': 'Sport et loisirs',
+      
+      // Autres activités de services (94-96)
+      '94': 'Associations',
+      '95': 'Réparation',
+      '96': 'Services personnels',
+      
+      // Activités des ménages en tant qu'employeurs (97-98)
+      '97': 'Services domestiques',
+      '98': 'Services domestiques',
+      
+      // Activités extra-territoriales (99)
+      '99': 'Organismes internationaux'
     };
 
+    // Extraction de la section NAF (2 premiers caractères)
     const sectionNaf = codeNaf.substring(0, 2);
-    return secteurs[sectionNaf] || 'Autres';
+    let secteur: string | undefined = secteurs[sectionNaf];
+    
+    // Le secteur est déterminé uniquement par le code NAF
+    
+    console.log('✅ Code NAF', codeNaf, '-> Section', sectionNaf, '-> Secteur:', secteur || 'Non reconnu');
+    
+    return secteur || `Non reconnu (${codeNaf})`;
+  }
+
+  /**
+   * Analyse le libellé d'activité pour déterminer le secteur
+   */
+  private analyzeActivityLabel(libelle: string): string | null {
+    if (!libelle) return null;
+    
+    const libelleMinuscule = libelle.toLowerCase();
+    
+    // Mots-clés pour identifier les secteurs
+    const motsClefsSecteurs: { [key: string]: string[] } = {
+      'Enseignement': ['enseignement', 'éducation', 'formation', 'université', 'école', 'lycée', 'collège', 'académie'],
+      'Informatique': ['informatique', 'logiciel', 'numérique', 'digital', 'web', 'internet', 'programmation', 'développement'],
+      'Santé': ['santé', 'médical', 'médecin', 'hôpital', 'clinique', 'pharmacie', 'soins'],
+      'Commerce': ['commerce', 'vente', 'magasin', 'boutique', 'distribution', 'retail'],
+      'Industrie': ['industrie', 'fabrication', 'production', 'manufacture', 'usine'],
+      'BTP': ['construction', 'bâtiment', 'travaux', 'génie civil', 'maçonnerie'],
+      'Transport': ['transport', 'logistique', 'livraison', 'expedition'],
+      'Agriculture': ['agriculture', 'agricole', 'élevage', 'culture'],
+      'Restauration': ['restauration', 'restaurant', 'café', 'bar', 'traiteur'],
+      'Banque et finance': ['banque', 'bancaire', 'finance', 'crédit', 'assurance'],
+      'Immobilier': ['immobilier', 'immobilière', 'foncier'],
+      'Administration publique': ['administration', 'public', 'municipale', 'gouvernement', 'état'],
+      'Recherche et développement': ['recherche', 'développement', 'innovation', 'laboratoire'],
+      'Services': ['services', 'conseil', 'consultance', 'expertise']
+    };
+    
+    // Recherche du secteur correspondant
+    for (const [secteur, motsCles] of Object.entries(motsClefsSecteurs)) {
+      for (const motCle of motsCles) {
+        if (libelleMinuscule.includes(motCle)) {
+          console.log(`🎯 Secteur identifié par mot-clé "${motCle}":`, secteur);
+          return secteur;
+        }
+      }
+    }
+    
+    console.log('❌ Aucun secteur identifié dans le libellé');
+    return null;
   }
 
   /**

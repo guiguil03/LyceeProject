@@ -371,20 +371,7 @@ const MatchingLycees: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Informations supplémentaires */}
-                    <div className="bg-white rounded-lg p-4 shadow-sm">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                        ℹ️ Informations
-                      </h4>
-                      <div className="space-y-2">
-                        <div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm">
-                          ✅ Données INSEE officielles
-                        </div>
-                        <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm">
-                          🔄 Mise à jour en temps réel
-                        </div>
-                      </div>
-                    </div>
+                   
                   </div>
                 </div>
 
@@ -403,35 +390,7 @@ const MatchingLycees: React.FC = () => {
               </div>
             )}
 
-            {/* Critères utilisés et suggestions */}
-            {(results.criteresUtilises || results.suggestions) && (
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
-                {results.criteresUtilises && (
-                  <div className="mb-4">
-                    <h4 className="font-medium text-yellow-800 mb-2">📋 Critères utilisés :</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {results.criteresUtilises.map((critere, index) => (
-                        <span key={index} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
-                          {critere}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {results.suggestions && results.suggestions.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-orange-800 mb-2">💡 Suggestions :</h4>
-                    <ul className="text-sm text-orange-700 space-y-1">
-                      {results.suggestions.map((suggestion, index) => (
-                        <li key={index}>• {suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
+           
             {/* Résultats des lycées */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-6">
@@ -489,7 +448,7 @@ const LyceeCard: React.FC<{ match: MatchingResult; rank: number }> = ({ match, r
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <span className={`rounded-full w-10 h-10 flex items-center justify-center text-sm font-bold ${getRankColor(rank)}`}>
-              {rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank}
+              {rank}
             </span>
             <div>
               <h4 className="text-lg font-semibold text-gray-800">
@@ -508,11 +467,7 @@ const LyceeCard: React.FC<{ match: MatchingResult; rank: number }> = ({ match, r
           </p>
         </div>
         
-        <div className="text-right">
-          <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${getScoreColor(match.score)}`}>
-            ⭐ {match.score}/100
-          </div>
-        </div>
+      
       </div>
 
       <div className="mb-4">
