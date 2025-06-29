@@ -1,0 +1,116 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import MatchingLycees from './MatchingLycees';
+
+const SearchPage: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header gouvernemental amélioré */}
+      <header className="bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 font-medium tracking-wide uppercase">République Française</div>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  LycéeProject
+                </h1>
+              </div>
+            </div>
+            <nav>
+              <button
+                onClick={() => navigate('/')}
+                className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 px-4 py-2 rounded-lg hover:bg-blue-50"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Accueil
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Fil d'Ariane amélioré */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <nav className="flex items-center text-sm text-gray-600 space-x-2">
+            <button 
+              onClick={() => navigate('/')}
+              className="hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-2 py-1"
+            >
+              Accueil
+            </button>
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="text-gray-900 font-medium">Recherche de lycées</span>
+          </nav>
+        </div>
+      </div>
+
+    
+
+      {/* Contenu principal */}
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* En-tête de la section de recherche */}
+          <div className="bg-gray-50 px-8 py-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Outils de recherche
+                </h3>
+                <p className="text-gray-600 mt-1">
+                  Personnalisez votre recherche selon vos préférences
+                </p>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Données officielles du ministère</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Composant de recherche */}
+          <div className="p-8">
+            <MatchingLycees />
+          </div>
+        </div>
+
+        {/* Section d'aide */}
+        <div className="mt-12 bg-blue-50 rounded-xl p-8">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Besoin d'aide pour votre recherche ?
+            </h3>
+            <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
+              Consultez notre guide d'utilisation ou contactez notre service d'assistance 
+              pour obtenir de l'aide dans votre recherche d'orientation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Guide d'utilisation
+              </button>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Contacter l'assistance
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default SearchPage; 
