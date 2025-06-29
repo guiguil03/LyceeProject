@@ -1,5 +1,17 @@
 import axios from 'axios';
 
+// Interface pour la réponse de l'API
+interface ApiResponse {
+  nhits: number;
+  records: ApiRecord[];
+}
+
+interface ApiRecord {
+  fields: any;
+  geometry?: any;
+  record_timestamp?: string;
+}
+
 export interface LyceeProfessionnel {
   numero_uai: string;
   nom_etablissement: string;
@@ -78,14 +90,15 @@ class LyceeService {
       console.log('🔍 Recherche lycées avec URL:', url);
       
       const response = await axios.get(url);
+      const apiData = response.data as ApiResponse;
       
       console.log('📊 Réponse API lycées:', {
-        totalRecords: response.data.nhits || 0,
-        recordsReturned: response.data.records?.length || 0,
-        firstRecord: response.data.records?.[0]?.fields || null
+        totalRecords: apiData.nhits || 0,
+        recordsReturned: apiData.records?.length || 0,
+        firstRecord: apiData.records?.[0]?.fields || null
       });
       
-      return response.data.records.map((record: any) => this.formatLyceeData(record));
+      return apiData.records.map((record: ApiRecord) => this.formatLyceeData(record));
     } catch (error) {
       console.error('Erreur lors de la recherche des lycées:', error);
       throw new Error('Impossible de récupérer les données des lycées professionnels');
@@ -103,12 +116,13 @@ class LyceeService {
       queryParams.append('refine.numero_uai', uai);
 
       const response = await axios.get(`${this.baseUrl}?${queryParams.toString()}`);
+      const apiData = response.data as ApiResponse;
       
-      if (response.data.records.length === 0) {
+      if (apiData.records.length === 0) {
         return null;
       }
 
-      return this.formatLyceeData(response.data.records[0]);
+      return this.formatLyceeData(apiData.records[0]);
     } catch (error) {
       console.error('Erreur lors de la récupération du lycée:', error);
       return null;

@@ -1,5 +1,41 @@
 import axios from 'axios';
 
+// Interfaces pour les réponses API
+interface InseeApiResponse {
+  etablissement: {
+    siret: string;
+    siren: string;
+    uniteLegale?: {
+      denominationUniteLegale?: string;
+      etatAdministratifUniteLegale?: string;
+      prenom1UniteLegale?: string;
+      nomUniteLegale?: string;
+      activitePrincipaleUniteLegale?: string;
+    };
+    denominationUsuelleEtablissement?: string;
+    periodesEtablissement?: Array<{
+      activitePrincipaleEtablissement?: string;
+    }>;
+    adresseEtablissement?: {
+      numeroVoieEtablissement?: string;
+      typeVoieEtablissement?: string;
+      libelleVoieEtablissement?: string;
+      libelleCommuneEtablissement?: string;
+      codePostalEtablissement?: string;
+    };
+    dateCreationEtablissement?: string;
+    statutDiffusionEtablissement?: string;
+  };
+}
+
+interface GeocodeApiResponse {
+  features: Array<{
+    geometry: {
+      coordinates: [number, number];
+    };
+  }>;
+}
+
 export interface Entreprise {
   siret: string;
   siren: string;
@@ -100,9 +136,10 @@ class SiretService {
       });
 
       console.log('📡 Statut réponse API INSEE:', response.status);
+      const apiData = response.data as InseeApiResponse;
 
-      if (response.data && response.data.etablissement) {
-        const etab = response.data.etablissement;
+      if (apiData && apiData.etablissement) {
+        const etab = apiData.etablissement;
         const uniteLegale = etab.uniteLegale || {};
         
         // Récupération de l'activité principale depuis les périodes
@@ -117,7 +154,7 @@ class SiretService {
           etat: uniteLegale.etatAdministratifUniteLegale
         });
 
-        const secteurActivite = this.getSecteurActiviteFromNaf(activitePrincipale);
+        const secteurActivite = this.getSecteurActiviteFromNaf(activitePrincipale || '');
 
         const adresse = {
           numeroVoie: etab.adresseEtablissement?.numeroVoieEtablissement || '',
@@ -148,8 +185,8 @@ class SiretService {
 
       console.log('❌ Aucun établissement trouvé dans la réponse API');
       return null;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
+    } catch (error: any) {
+      if (error?.response) {
         console.error('❌ Erreur API INSEE:', {
           status: error.response?.status,
           statusText: error.response?.statusText,
@@ -452,8 +489,9 @@ class SiretService {
         timeout: 3000
       });
 
-      if (response.data && response.data.features && response.data.features.length > 0) {
-        const feature = response.data.features[0];
+      const geocodeData = response.data as GeocodeApiResponse;
+      if (geocodeData && geocodeData.features && geocodeData.features.length > 0) {
+        const feature = geocodeData.features[0];
         return {
           latitude: feature.geometry.coordinates[1],
           longitude: feature.geometry.coordinates[0]
