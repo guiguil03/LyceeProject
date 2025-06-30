@@ -1,9 +1,11 @@
+'use client';
+
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useRouter, usePathname } from 'next/navigation';
 
 const Navbar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const navigationItems = [
     {
@@ -41,12 +43,11 @@ const Navbar: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       )
-    },
-   
+    }
   ];
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return pathname === path;
   };
 
   return (
@@ -73,7 +74,7 @@ const Navbar: React.FC = () => {
             {navigationItems.map((item) => (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => router.push(item.path)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                   isActive(item.path)
                     ? 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -103,7 +104,7 @@ const Navbar: React.FC = () => {
           {navigationItems.map((item) => (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => router.push(item.path)}
               className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
                 isActive(item.path)
                   ? 'bg-blue-50 text-blue-700 border border-blue-200'

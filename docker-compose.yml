@@ -23,6 +23,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      FRONTEND_URL: http://localhost:3000
       DB_HOST: database
       DB_PORT: 5432
       DB_NAME: lyceeproject
@@ -40,17 +41,21 @@ services:
       - ./backend:/app
       - /app/node_modules
 
-  # Frontend React/Vite avec Nginx
+  # Frontend Next.js
   frontend:
     build: ./frontend
     container_name: lyceeproject-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
-      - "5173:5173"
+      - "3000:3000"
     depends_on:
       - backend
     networks:
       - lyceeproject-network
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:

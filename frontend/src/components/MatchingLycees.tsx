@@ -1,14 +1,34 @@
+'use client';
+
 import React, { useState } from 'react';
-import type { MatchingCriteria, MatchingResponse, MatchingResult } from '../types/api';
+
+interface MatchingCriteria {
+  entreprise?: {
+    secteurActivite?: string;
+    siret?: string;
+    localisation?: {
+      commune?: string;
+      departement?: string;
+      codePostal?: string;
+    };
+  };
+  preferences?: {
+    distanceMax?: number;
+    typeEtablissement?: string;
+    nombreResultats?: number;
+  };
+}
 
 const MatchingLycees: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<MatchingResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<any>(null);
+  const [entrepriseInfo, setEntrepriseInfo] = useState<any>(null);
   
   const [criteria, setCriteria] = useState<MatchingCriteria>({
     entreprise: {
       secteurActivite: '',
+      siret: '',
       localisation: {
         commune: '',
         departement: '',
@@ -31,11 +51,13 @@ const MatchingLycees: React.FC = () => {
     setLoading(true);
     setError(null);
     setResults(null);
+    setEntrepriseInfo(null);
 
     try {
       console.log('🔍 Recherche avec critères:', criteria);
       
-      const response = await fetch('http://localhost:3001/api/matching', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/matching`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,8 +72,12 @@ const MatchingLycees: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        setResults(data.data);
-        console.log('✅ Résultats:', data.data.matches?.length || 0, 'lycées trouvés');
+        console.log('✅ Résultats reçus:', data.data);
+        console.log('✅ Nombre de lycées:', data.data.matches?.length || 0);
+        
+        setResults(data.data.matches || []);
+        setEntrepriseInfo(data.data.entreprise || null);
+        setError(null);
       } else {
         throw new Error(data.message || 'Erreur lors de la recherche');
       }
@@ -71,7 +97,7 @@ const MatchingLycees: React.FC = () => {
           🎓 Trouvez vos futurs alternants
         </div>
         <h1 className="text-4xl font-light text-gray-900 mb-4">
-          Découvrez les lycées professionnels qui correspondent à votre secteur d'activité
+          Découvrez les lycées professionnels qui correspondent à votre secteur d&apos;activité
         </h1>
       </div>
 
@@ -122,38 +148,16 @@ const MatchingLycees: React.FC = () => {
                       ...prev,
                       entreprise: { ...prev.entreprise, siret: e.target.value }
                     }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
                     placeholder="Saisissez le SIRET de votre entreprise"
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                </div>
-                
-                {/* SIRETs de démonstration */}
-                <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-medium text-amber-800 mb-2">SIRETs de démonstration :</p>
-                      <div className="text-xs text-amber-700 space-y-1">
-                        <div>• <span className="font-mono">78467169500015</span> (Informatique - Paris)</div>
-                        <div>• <span className="font-mono">12345678901234</span> (Commerce - Meaux)</div>
-                        <div>• <span className="font-mono">98765432109876</span> (Bâtiment - Torcy)</div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Secteur d'activité */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Secteur d'activité <span className="text-red-500">*</span>
+                  Secteur d&apos;activité <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -162,17 +166,17 @@ const MatchingLycees: React.FC = () => {
                       ...prev,
                       entreprise: { ...prev.entreprise, secteurActivite: e.target.value }
                     }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white text-gray-900"
                     required
                   >
-                    <option value="">Sélectionnez un secteur</option>
-                    <option value="informatique">💻 Informatique et numérique</option>
-                    <option value="commerce">🛍️ Commerce et vente</option>
-                    <option value="industrie">🏭 Industrie et production</option>
-                    <option value="batiment">🏗️ Bâtiment et travaux publics</option>
-                    <option value="restauration">🍽️ Restauration et hôtellerie</option>
-                    <option value="transport">🚛 Transport et logistique</option>
-                    <option value="sante">🏥 Santé et social</option>
+                    <option value="" className="text-gray-500">Sélectionnez un secteur</option>
+                    <option value="informatique" className="text-gray-900">💻 Informatique et numérique</option>
+                    <option value="commerce" className="text-gray-900">🛍️ Commerce et vente</option>
+                    <option value="industrie" className="text-gray-900">🏭 Industrie et production</option>
+                    <option value="batiment" className="text-gray-900">🏗️ Bâtiment et travaux publics</option>
+                    <option value="restauration" className="text-gray-900">🍽️ Restauration et hôtellerie</option>
+                    <option value="transport" className="text-gray-900">🚛 Transport et logistique</option>
+                    <option value="sante" className="text-gray-900">🏥 Santé et social</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +187,7 @@ const MatchingLycees: React.FC = () => {
               </div>
             </div>
 
-            {/* Section Localisation */}
+            {/* Section Localisation et Préférences */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
@@ -192,142 +196,140 @@ const MatchingLycees: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900">Localisation</h3>
+                <h3 className="text-lg font-medium text-gray-900">Localisation et Préférences</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Commune</label>
-                  <input
-                    type="text"
-                    value={criteria.entreprise?.localisation?.commune || ''}
-                    onChange={(e) => setCriteria(prev => ({
-                      ...prev,
-                      entreprise: {
-                        ...prev.entreprise,
-                        localisation: { ...prev.entreprise?.localisation, commune: e.target.value }
-                      }
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Paris"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Département</label>
-                  <input
-                    type="text"
-                    value={criteria.entreprise?.localisation?.departement || ''}
-                    onChange={(e) => setCriteria(prev => ({
-                      ...prev,
-                      entreprise: {
-                        ...prev.entreprise,
-                        localisation: { ...prev.entreprise?.localisation, departement: e.target.value }
-                      }
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Paris"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Code postal</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Commune</label>
                 <input
                   type="text"
-                  value={criteria.entreprise?.localisation?.codePostal || ''}
+                  value={criteria.entreprise?.localisation?.commune || ''}
                   onChange={(e) => setCriteria(prev => ({
                     ...prev,
-                    entreprise: {
-                      ...prev.entreprise,
-                      localisation: { ...prev.entreprise?.localisation, codePostal: e.target.value }
+                    entreprise: { 
+                      ...prev.entreprise, 
+                      localisation: { 
+                        ...prev.entreprise?.localisation, 
+                        commune: e.target.value 
+                      } 
                     }
                   }))}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="75015"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
+                  placeholder="Paris, Lyon, Marseille..."
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Préférences de recherche */}
-          <div className="mt-12 pt-8 border-t border-gray-100">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Préférences de recherche</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Distance maximale (km)
-                </label>
-                <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Distance maximale (km)
+                  </label>
                   <input
                     type="number"
                     min="1"
-                    max="500"
+                    max="200"
                     value={criteria.preferences?.distanceMax || 50}
                     onChange={(e) => setCriteria(prev => ({
                       ...prev,
-                      preferences: { ...prev.preferences, distanceMax: parseInt(e.target.value) || 50 }
+                      preferences: { 
+                        ...prev.preferences, 
+                        distanceMax: parseInt(e.target.value) || 50
+                      }
                     }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <span className="text-sm text-gray-500">km</span>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-gray-500">Zone de recherche autour de votre entreprise</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Type d'établissement
-                </label>
-                <div className="relative">
-                  <select
-                    value={criteria.preferences?.typeEtablissement || 'tous'}
-                    onChange={(e) => setCriteria(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, typeEtablissement: e.target.value as 'tous' | 'public' | 'prive' }
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white"
-                  >
-                    <option value="tous">Tous les types</option>
-                    <option value="public">Public uniquement</option>
-                    <option value="prive">Privé uniquement</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Nombre de résultats
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={criteria.preferences?.nombreResultats || 10}
-                    onChange={(e) => setCriteria(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, nombreResultats: parseInt(e.target.value) || 10 }
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
                   />
                 </div>
-                <p className="mt-2 text-xs text-gray-500">Maximum de lycées à afficher</p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Nombre de lycées souhaités
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={criteria.preferences?.nombreResultats || 10}
+                      onChange={(e) => setCriteria(prev => ({
+                        ...prev,
+                        preferences: { 
+                          ...prev.preferences, 
+                          nombreResultats: parseInt(e.target.value)
+                        }
+                      }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white text-gray-900"
+                    >
+                      <option value={5} className="text-gray-900">5 lycées</option>
+                      <option value={10} className="text-gray-900">10 lycées</option>
+                      <option value={15} className="text-gray-900">15 lycées</option>
+                      <option value={20} className="text-gray-900">20 lycées</option>
+                      <option value={30} className="text-gray-900">30 lycées</option>
+                      <option value={50} className="text-gray-900">50 lycées</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Type d'établissement */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Type d&apos;établissement
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="typeEtablissement"
+                      value="tous"
+                      checked={criteria.preferences?.typeEtablissement === 'tous'}
+                      onChange={(e) => setCriteria(prev => ({
+                        ...prev,
+                        preferences: { 
+                          ...prev.preferences, 
+                          typeEtablissement: e.target.value
+                        }
+                      }))}
+                      className="mr-2 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-900">Tous</span>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="typeEtablissement"
+                      value="public"
+                      checked={criteria.preferences?.typeEtablissement === 'public'}
+                      onChange={(e) => setCriteria(prev => ({
+                        ...prev,
+                        preferences: { 
+                          ...prev.preferences, 
+                          typeEtablissement: e.target.value
+                        }
+                      }))}
+                      className="mr-2 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-900">Public</span>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="typeEtablissement"
+                      value="prive"
+                      checked={criteria.preferences?.typeEtablissement === 'prive'}
+                      onChange={(e) => setCriteria(prev => ({
+                        ...prev,
+                        preferences: { 
+                          ...prev.preferences, 
+                          typeEtablissement: e.target.value
+                        }
+                      }))}
+                      className="mr-2 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-900">Privé</span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -337,13 +339,12 @@ const MatchingLycees: React.FC = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-4 px-12 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none disabled:cursor-not-allowed flex items-center gap-3"
+              className="inline-flex items-center gap-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-8 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Recherche en cours...
                 </>
@@ -352,252 +353,193 @@ const MatchingLycees: React.FC = () => {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  Trouver des lycées
+                  Rechercher des lycées
                 </>
               )}
             </button>
           </div>
 
-          {/* Message d'erreur */}
+          {/* Affichage des erreurs */}
           {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <p className="text-red-800 font-medium">{error}</p>
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <p className="text-red-800">{error}</p>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Affichage des résultats */}
-      {results && (
-        <div className="mt-12 space-y-6">
-          {/* Informations sur l'entreprise */}
-          {results.entreprise && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-8 border border-blue-200">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                  🏢 Entreprise trouvée via API INSEE
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                    ✓ Données officielles
-                  </span>
-                </h3>
+      {/* Affichage des informations d'entreprise si trouvée via SIRET */}
+      {entrepriseInfo && (
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-8 py-6 border-b border-gray-100">
+            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">🏢</span>
               </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Informations principales */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      📋 Informations générales
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dénomination sociale</label>
-                        <p className="text-xl font-bold text-gray-900 mt-1">
-                          {results.entreprise.denominationSociale}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">SIRET</label>
-                        <p className="text-lg font-mono text-gray-800 mt-1 bg-gray-50 px-3 py-1 rounded">
-                          {results.entreprise.siret}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          SIREN: {results.entreprise.siret.substring(0, 9)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Secteur d'activité</label>
-                        <p className="text-lg text-blue-700 font-semibold mt-1 bg-blue-50 px-3 py-2 rounded-lg">
-                          {results.entreprise.secteurActivite}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Adresse et localisation */}
-                <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      📍 Localisation
-                    </h4>
-                    <div className="space-y-3">
-                      {results.entreprise.adresse && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Localisation</label>
-                          <div className="mt-1 text-gray-800">
-                            <p className="text-lg font-semibold text-blue-600">
-                              {results.entreprise.adresse.codePostal} {results.entreprise.adresse.commune}
-                            </p>
-                            <p className="text-gray-600">
-                              {results.entreprise.adresse.departement}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {results.entreprise.coordonnees && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">Coordonnées GPS</label>
-                          <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded font-mono">
-                            <p>Lat: {results.entreprise.coordonnees.latitude?.toFixed(4)}</p>
-                            <p>Lng: {results.entreprise.coordonnees.longitude?.toFixed(4)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Source des données */}
-              <div className="mt-6 pt-4 border-t border-blue-200">
-                <div className="flex items-center justify-between text-sm text-gray-600">
+              Informations de votre entreprise
+            </h3>
+            <p className="text-gray-600 mt-1">Données récupérées depuis la base SIRENE</p>
+          </div>
+          
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">{entrepriseInfo.denominationSociale}</h4>
+                <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
-                    <span className="text-blue-600">ℹ️</span>
-                    <span>Données provenant de l'API SIRENE officielle de l'INSEE</span>
+                    <span className="text-gray-400">🏢</span>
+                    <span>SIRET: {entrepriseInfo.siret}</span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    Mise à jour en temps réel
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">💼</span>
+                    <span>Secteur: {entrepriseInfo.secteurActivite}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-700 mb-2">Adresse</h5>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">📍</span>
+                    <span>{entrepriseInfo.adresse.commune} ({entrepriseInfo.adresse.departement})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">📮</span>
+                    <span>{entrepriseInfo.adresse.codePostal}</span>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Résultats des lycées */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-800">
-                🎯 Lycées correspondants ({results.matches?.length || 0})
-              </h3>
-              <div className="text-sm text-gray-500">
-                Triés par pertinence
-              </div>
-            </div>
-
-            {results.matches && results.matches.length > 0 ? (
-              <div className="grid gap-6">
-                {results.matches.map((match, index) => (
-                  <LyceeCard key={match.lycee.numero_uai} match={match} rank={index + 1} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">🔍</div>
-                <p className="text-gray-500 text-lg mb-2">Aucun lycée trouvé avec ces critères</p>
-                <p className="text-gray-400 text-sm">Essayez d'élargir vos critères de recherche</p>
-              </div>
-            )}
           </div>
         </div>
       )}
-    </div>
-  );
-};
 
-// Composant pour afficher une carte de lycée améliorée
-const LyceeCard: React.FC<{ match: MatchingResult; rank: number }> = ({ match, rank }) => {
-  const [showDetails, setShowDetails] = useState(false);
-
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return 'bg-yellow-500 text-white';
-    if (rank === 2) return 'bg-gray-400 text-white';
-    if (rank === 3) return 'bg-amber-600 text-white';
-    return 'bg-blue-600 text-white';
-  };
-
-  return (
-    <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all duration-200 hover:border-blue-300">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <span className={`rounded-full w-10 h-10 flex items-center justify-center text-sm font-bold ${getRankColor(rank)}`}>
-              {rank}
-            </span>
-            <div>
-              <h4 className="text-lg font-semibold text-gray-800">
-                {match.lycee.nom_etablissement}
-              </h4>
-              <p className="text-gray-600 text-sm">{match.lycee.type_etablissement}</p>
+      {/* Affichage des résultats */}
+      {results && results.length > 0 && (
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-6 border-b border-gray-100">
+            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">✓</span>
+              </div>
+              Résultats de recherche
+            </h3>
+            <p className="text-gray-600 mt-1">{results.length} lycée(s) trouvé(s)</p>
+          </div>
+          
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {results.map((match: any, index: number) => {
+                const lycee = match.lycee;
+                return (
+                  <div key={index} className="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900 text-lg leading-tight">
+                        {lycee.nom_etablissement}
+                      </h4>
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                        {match.score}/100
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400">📍</span>
+                        <span>{lycee.libelle_commune} ({lycee.libelle_departement})</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400">🏛️</span>
+                        <span className="capitalize">{lycee.statut_public_prive}</span>
+                      </div>
+                      
+                      {match.distance && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">📏</span>
+                          <span>{Math.round(match.distance)} km</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Motifs de correspondance */}
+                    {match.motifs && match.motifs.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-500 mb-2">Raisons de correspondance :</p>
+                        <div className="space-y-1">
+                          {match.motifs.slice(0, 2).map((motif: string, idx: number) => (
+                            <div key={idx} className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                              {motif}
+                            </div>
+                          ))}
+                          {match.motifs.length > 2 && (
+                            <span className="text-xs text-gray-500">+{match.motifs.length - 2} autres</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Formations (quelques-unes) */}
+                    {lycee.formations && lycee.formations.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-500 mb-1">Formations disponibles :</p>
+                        <div className="flex flex-wrap gap-1">
+                          {lycee.formations.slice(0, 2).map((formation: string, idx: number) => (
+                            <span key={idx} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded">
+                              {formation.length > 25 ? formation.substring(0, 25) + '...' : formation}
+                            </span>
+                          ))}
+                          {lycee.formations.length > 2 && (
+                            <span className="text-xs text-gray-500">+{lycee.formations.length - 2}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Contact */}
+                    {(lycee.telephone || lycee.mail) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        {lycee.telephone && (
+                          <div className="flex items-center gap-2 text-xs mb-1">
+                            <span className="text-gray-400">📞</span>
+                            <span>{lycee.telephone}</span>
+                          </div>
+                        )}
+                        {lycee.mail && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-400">📧</span>
+                            <span className="truncate">{lycee.mail}</span>
+                          </div>
+                        )}
+                        {lycee.web && (
+                          <div className="flex items-center gap-2 text-xs mt-1">
+                            <span className="text-gray-400">🌐</span>
+                            <a href={lycee.web} target="_blank" rel="noopener noreferrer" 
+                               className="text-blue-600 hover:text-blue-800 truncate">
+                              Site web
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <p className="text-gray-500 text-sm flex items-center gap-1">
-            📍 {match.lycee.libelle_commune}, {match.lycee.libelle_departement}
-            {match.distance && (
-              <span className="ml-2 bg-gray-100 px-2 py-1 rounded text-xs">
-                📏 {match.distance} km
-              </span>
-            )}
-          </p>
         </div>
-        
-      
-      </div>
+      )}
 
-      <div className="mb-4">
-        <div className="flex flex-wrap gap-2">
-          {match.motifs.map((motif, idx) => (
-            <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-200">
-              {motif}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <button
-        onClick={() => setShowDetails(!showDetails)}
-        className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 transition-colors"
-      >
-        {showDetails ? '▼ Masquer les détails' : '▶ Voir les détails'}
-      </button>
-
-      {showDetails && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <p><strong>UAI:</strong> {match.lycee.numero_uai}</p>
-              <p><strong>Statut:</strong> 
-                <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                  match.lycee.statut_public_prive === 'Public' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-purple-100 text-purple-800'
-                }`}>
-                  {match.lycee.statut_public_prive}
-                </span>
-              </p>
-              <p><strong>Adresse:</strong> {match.lycee.adresse_1}</p>
-              <p><strong>Code postal:</strong> {match.lycee.code_postal_uai}</p>
-            </div>
-            <div className="space-y-2">
-              {match.lycee.telephone && (
-                <p><strong>📞 Téléphone:</strong> 
-                  <a href={`tel:${match.lycee.telephone}`} className="text-blue-600 hover:underline ml-1">
-                    {match.lycee.telephone}
-                  </a>
-                </p>
-              )}
-              {match.lycee.mail && (
-                <p><strong>📧 Email:</strong> 
-                  <a href={`mailto:${match.lycee.mail}`} className="text-blue-600 hover:underline ml-1">
-                    {match.lycee.mail}
-                  </a>
-                </p>
-              )}
-              {match.lycee.web && (
-                <p><strong>🌐 Site web:</strong> 
-                  <a href={match.lycee.web} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
-                    Visiter
-                  </a>
-                </p>
-              )}
-            </div>
-          </div>
+      {/* Message si aucun résultat */}
+      {results && results.length === 0 && (
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+          <div className="text-gray-400 text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucun lycée trouvé</h3>
+          <p className="text-gray-600">Essayez de modifier vos critères de recherche ou d&apos;élargir la zone géographique.</p>
         </div>
       )}
     </div>

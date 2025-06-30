@@ -1,10 +1,12 @@
+'use client';
+
 import React from 'react';
-import MatchingLycees from './MatchingLycees';
+import MatchingLycees from '@/components/MatchingLycees';
 
-const SearchPage: React.FC = () => {
-
+export default function SearchPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">      {/* Contenu principal */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Contenu principal */}
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* En-tête de la section de recherche */}
@@ -37,18 +39,18 @@ const SearchPage: React.FC = () => {
         <div className="mt-12 bg-blue-50 rounded-xl p-8">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Besoin d'aide pour votre recherche ?
+              Besoin d&apos;aide pour votre recherche ?
             </h3>
             <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
-              Consultez notre guide d'utilisation ou contactez notre service d'assistance 
-              pour obtenir de l'aide dans votre recherche d'orientation.
+              Consultez notre guide d&apos;utilisation ou contactez notre service d&apos;assistance 
+              pour obtenir de l&apos;aide dans votre recherche d&apos;orientation.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                Guide d'utilisation
+                Guide d&apos;utilisation
               </button>
               <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                Contacter l'assistance
+                Contacter l&apos;assistance
               </button>
             </div>
           </div>
@@ -56,6 +58,4 @@ const SearchPage: React.FC = () => {
       </main>
     </div>
   );
-};
-
-export default SearchPage; 
+} 
