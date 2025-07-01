@@ -74,36 +74,7 @@ npm install
 npm run dev
 ```
 
-## 🗄️ Base de données
 
-La base de données PostgreSQL est automatiquement initialisée avec :
-- Tables pour utilisateurs, classes, matières, cours, notes, absences
-- Données d'exemple
-- Index pour optimiser les performances
-- Triggers pour la gestion des timestamps
-
-### Schéma principal
-- `utilisateurs` : Élèves, professeurs, administrateurs
-- `classes` : Organisation des classes par niveau
-- `matieres` : Matières enseignées
-- `cours` : Planification des cours
-- `notes` : Évaluations des élèves
-- `absences` : Gestion des absences
-
-## 🔧 API Endpoints
-
-### Utilisateurs
-- `GET /api/users` - Liste des utilisateurs
-- `POST /api/users` - Créer un utilisateur
-
-### Cours
-- `GET /api/cours` - Liste des cours
-
-### Statistiques
-- `GET /api/stats` - Statistiques du lycée
-
-### Health Check
-- `GET /health` - Vérification de l'état du serveur
 
 ## 🐳 Docker
 
@@ -136,16 +107,7 @@ docker-compose exec database psql -U postgres -d lyceeproject
 
 Copiez `.env.example` vers `.env` dans le dossier backend et ajustez selon vos besoins :
 
-```env
-PORT=3001
-NODE_ENV=development
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=lyceeproject
-DB_USER=postgres
-DB_PASSWORD=password
-JWT_SECRET=votre_jwt_secret_super_secure_ici
-```
+
 
 ## 🧪 Tests
 
@@ -171,16 +133,3 @@ Le projet est prêt pour le déploiement avec Docker. Ajustez les variables d'en
 4. Push vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrez une Pull Request
 
-## 📝 License
-
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
-
-## 👨‍💻 Auteurs
-
-- Votre nom - [Votre email]
-
-## 🙏 Remerciements
-
-- React Team
-- Node.js Community
-- PostgreSQL Team

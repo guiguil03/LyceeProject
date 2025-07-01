@@ -1,0 +1,7 @@
+{
+  "/chat/page": "app/chat/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/lycee/page": "app/lycee/page.js",
+  "/page": "app/page.js",
+  "/search/page": "app/search/page.js"
+}
