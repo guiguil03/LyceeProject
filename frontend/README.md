@@ -76,21 +76,7 @@ Assurez-vous que le backend est démarré avant d'utiliser les fonctionnalités 
 - **MatchingLycees** - Composant de recherche avec critères avancés
 - **Navbar** - Navigation principale avec onglets interactifs
 
-## 📱 Responsive Design
 
-Toutes les pages sont optimisées pour mobile, tablette et desktop grâce à Tailwind CSS.
-
-## 🔄 Migration depuis React/Vite
-
-Cette version Next.js reprend toutes les fonctionnalités de la version React/Vite :
-
-- ✅ Navigation par onglets
-- ✅ Page d'accueil
-- ✅ Recherche de lycées
-- ✅ Page de présentation du lycée
-- ✅ Chat assistant
-- ✅ Design gouvernemental
-- ✅ Responsive design
 
 ## 🌐 Variables d'environnement
 

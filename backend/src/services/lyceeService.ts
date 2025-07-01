@@ -55,8 +55,8 @@ class LyceeService {
     try {
       const queryParams = new URLSearchParams({
         dataset: this.dataset,
-        rows: '100',
-        facet: ['code_postal_uai', 'localite_acheminement_uai', 'libelle_commune', 'libelle_departement', 'libelle_region', 'libelle_academie'].join(',')
+        rows: '1000', // Augmenté pour récupérer plus de lycées
+        facet: ['code_postal_uai', 'localite_acheminement_uai', 'libelle_commune', 'libelle_departement', 'libelle_region', 'libelle_academie', 'secteur'].join(',')
       });
 
       // Construction des filtres avec le format correct de l'API
@@ -95,8 +95,19 @@ class LyceeService {
       console.log('📊 Réponse API lycées:', {
         totalRecords: apiData.nhits || 0,
         recordsReturned: apiData.records?.length || 0,
-        firstRecord: apiData.records?.[0]?.fields || null
+        firstRecordFields: apiData.records?.[0]?.fields ? Object.keys(apiData.records[0].fields) : []
       });
+      
+      if (apiData.records && apiData.records.length > 0) {
+        console.log('📋 Premier lycée exemple:', {
+          uai: apiData.records[0].fields?.numero_uai,
+          nom: apiData.records[0].fields?.appellation_officielle,
+          commune: apiData.records[0].fields?.libelle_commune,
+          hasDiplomes: !!apiData.records[0].fields?.diplomes_prepares,
+          hasMetiers: !!apiData.records[0].fields?.metiers_prepares,
+          hasPosition: !!apiData.records[0].fields?.position
+        });
+      }
       
       return apiData.records.map((record: ApiRecord) => this.formatLyceeData(record));
     } catch (error) {
@@ -221,6 +232,8 @@ class LyceeService {
   private formatLyceeData(record: any): LyceeProfessionnel {
     const fields = record.fields;
     
+    console.log('🔍 Données brutes disponibles pour', fields.numero_uai, ':', Object.keys(fields));
+    
     return {
       numero_uai: fields.numero_uai || '',
       nom_etablissement: fields.appellation_officielle || fields.nom_etablissement || '',
@@ -268,23 +281,28 @@ class LyceeService {
   private extractFormations(fields: any): string[] {
     const formations: string[] = [];
     
-    console.log('🔍 Extraction formations pour:', fields.appellation_officielle);
+    console.log('🔍 Extraction formations pour:', fields.appellation_officielle || fields.numero_uai);
     console.log('📚 Champs disponibles:', Object.keys(fields));
     
     // Diplômes préparés (séparés par |)
     if (fields.diplomes_prepares) {
-      console.log('🎓 Diplômes bruts:', fields.diplomes_prepares);
-      const diplomes = fields.diplomes_prepares.split('|').map((d: string) => d.trim());
+      console.log('🎓 Diplômes bruts:', fields.diplomes_prepares.substring(0, 200) + (fields.diplomes_prepares.length > 200 ? '...' : ''));
+      const diplomes = fields.diplomes_prepares.split('|')
+        .map((d: string) => d.trim())
+        .filter((d: string) => d.length > 0);
       formations.push(...diplomes);
       console.log('🎓 Diplômes extraits:', diplomes.length, 'diplômes');
     } else {
       console.log('❌ Pas de diplomes_prepares trouvé');
     }
     
-    // Métiers préparés (séparés par |) - CORRECTION ICI
+    // Métiers préparés (séparés par |)
     if (fields.metiers_prepares) {
-      console.log('💼 Métiers bruts:', fields.metiers_prepares.substring(0, 200) + '...');
-      const metiers = fields.metiers_prepares.split('|').map((m: string) => m.trim());
+      console.log('💼 Métiers bruts (longueur):', fields.metiers_prepares.length, 'caractères');
+      console.log('💼 Début métiers:', fields.metiers_prepares.substring(0, 100) + '...');
+      const metiers = fields.metiers_prepares.split('|')
+        .map((m: string) => m.trim())
+        .filter((m: string) => m.length > 0);
       formations.push(...metiers);
       console.log('💼 Métiers extraits:', metiers.length, 'métiers');
     } else {
@@ -297,10 +315,13 @@ class LyceeService {
       console.log('🏫 Appellation ajoutée:', fields.appellation_officielle);
     }
 
-    console.log('✅ Total formations extraites:', formations.length);
-    console.log('📋 Quelques formations:', formations.slice(0, 5));
+    // Suppression des doublons et filtrage
+    const formationsUniques = [...new Set(formations.filter(f => f && f.length > 0))];
+    
+    console.log('✅ Total formations uniques extraites:', formationsUniques.length);
+    console.log('📋 Échantillon formations:', formationsUniques.slice(0, 3));
 
-    return [...new Set(formations)]; // Suppression des doublons
+    return formationsUniques;
   }
 
   /**
