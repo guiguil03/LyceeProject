@@ -273,10 +273,7 @@ router.get('/entreprises/search', async (req, res) => {
   }
 });
 
-/**
- * GET /api/entreprises/:siret
- * Récupère les détails d'une entreprise par son SIRET
- */
+
 router.get('/entreprises/:siret', async (req, res) => {
   try {
     const { siret } = req.params;

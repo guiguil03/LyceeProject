@@ -31,6 +31,8 @@ export interface LyceeProfessionnel {
   web: string;
   mail: string;
   formations: string[];
+  diplomes: string[];
+  metiers: string[];
 }
 
 export interface LyceeSearchParams {
@@ -252,7 +254,9 @@ class LyceeService {
       fax: fields.fax || '',
       web: fields.web || '',
       mail: this.formatMail(fields.mail_bde),
-      formations: this.extractFormations(fields)
+      formations: this.extractFormations(fields),
+      diplomes: this.extractDiplomes(fields),
+      metiers: this.extractMetiers(fields)
     };
   }
 
@@ -276,15 +280,14 @@ class LyceeService {
   }
 
   /**
-   * Extrait les formations depuis les VRAIS champs de l'API
+   * Extrait SEULEMENT les diplômes (pas les métiers) depuis l'API
    */
   private extractFormations(fields: any): string[] {
     const formations: string[] = [];
     
     console.log('🔍 Extraction formations pour:', fields.appellation_officielle || fields.numero_uai);
-    console.log('📚 Champs disponibles:', Object.keys(fields));
     
-    // Diplômes préparés (séparés par |)
+    // SEULEMENT les diplômes préparés (séparés par |)
     if (fields.diplomes_prepares) {
       console.log('🎓 Diplômes bruts:', fields.diplomes_prepares.substring(0, 200) + (fields.diplomes_prepares.length > 200 ? '...' : ''));
       const diplomes = fields.diplomes_prepares.split('|')
@@ -296,33 +299,54 @@ class LyceeService {
       console.log('❌ Pas de diplomes_prepares trouvé');
     }
     
-    // Métiers préparés (séparés par |)
-    if (fields.metiers_prepares) {
-      console.log('💼 Métiers bruts (longueur):', fields.metiers_prepares.length, 'caractères');
-      console.log('💼 Début métiers:', fields.metiers_prepares.substring(0, 100) + '...');
-      const metiers = fields.metiers_prepares.split('|')
-        .map((m: string) => m.trim())
-        .filter((m: string) => m.length > 0);
-      formations.push(...metiers);
-      console.log('💼 Métiers extraits:', metiers.length, 'métiers');
-    } else {
-      console.log('❌ Pas de metiers_prepares trouvé');
-    }
-    
-    // Ajout de l'appellation officielle qui contient souvent des infos sur les métiers
-    if (fields.appellation_officielle) {
-      formations.push(fields.appellation_officielle);
-      console.log('🏫 Appellation ajoutée:', fields.appellation_officielle);
-    }
-
     // Suppression des doublons et filtrage
     const formationsUniques = [...new Set(formations.filter(f => f && f.length > 0))];
     
-    console.log('✅ Total formations uniques extraites:', formationsUniques.length);
-    console.log('📋 Échantillon formations:', formationsUniques.slice(0, 3));
+    console.log('✅ Total diplômes uniques extraits:', formationsUniques.length);
+    console.log('📋 Échantillon diplômes:', formationsUniques.slice(0, 3));
 
     return formationsUniques;
   }
+
+     /**
+    * Extrait les diplômes depuis les VRAIS champs de l'API
+    */
+   private extractDiplomes(fields: any): string[] {
+     const diplomes: string[] = [];
+     
+     // Diplômes préparés (séparés par |)
+     if (fields.diplomes_prepares) {
+       const diplomesArray = fields.diplomes_prepares.split('|')
+         .map((d: string) => d.trim())
+         .filter((d: string) => d.length > 0);
+       diplomes.push(...diplomesArray);
+     }
+     
+     // Suppression des doublons et filtrage
+     const diplomesUniques = [...new Set(diplomes.filter(d => d && d.length > 0))];
+     
+     return diplomesUniques;
+   }
+
+     /**
+    * Extrait les métiers depuis les VRAIS champs de l'API
+    */
+   private extractMetiers(fields: any): string[] {
+     const metiers: string[] = [];
+     
+     // Métiers préparés (séparés par |)
+     if (fields.metiers_prepares) {
+       const metiersArray = fields.metiers_prepares.split('|')
+         .map((m: string) => m.trim())
+         .filter((m: string) => m.length > 0);
+       metiers.push(...metiersArray);
+     }
+     
+     // Suppression des doublons et filtrage
+     const metiersUniques = [...new Set(metiers.filter(m => m && m.length > 0))];
+     
+     return metiersUniques;
+   }
 
   /**
    * Retourne les départements voisins d'une commune pour élargir la recherche
