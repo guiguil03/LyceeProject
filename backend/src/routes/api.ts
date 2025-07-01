@@ -104,30 +104,6 @@ router.get('/match/entreprises/:uai', async (req, res) => {
   }
 });
 
-/**
- * GET /api/match/stats/:secteur
- * Obtient des statistiques sur les possibilités de matching pour un secteur
- */
-router.get('/match/stats/:secteur', async (req, res) => {
-  try {
-    const { secteur } = req.params;
-    const departement = req.query.departement as string;
-
-    const stats = await matchingService.getMatchingStats(secteur, departement);
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des stats:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la récupération des statistiques',
-      message: error instanceof Error ? error.message : 'Erreur inconnue'
-    });
-  }
-});
-
 // ================================
 // ROUTES POUR LES LYCÉES
 // ================================

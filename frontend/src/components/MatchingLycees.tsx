@@ -442,9 +442,6 @@ const MatchingLycees: React.FC = () => {
                       <h4 className="font-semibold text-gray-900 text-lg leading-tight">
                         {lycee.nom_etablissement}
                       </h4>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                        {match.score}/100
-                      </span>
                     </div>
                     
                     <div className="space-y-2 text-sm text-gray-600">
@@ -465,23 +462,6 @@ const MatchingLycees: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
-                    {/* Motifs de correspondance */}
-                    {match.motifs && match.motifs.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs text-gray-500 mb-2">Raisons de correspondance :</p>
-                        <div className="space-y-1">
-                          {match.motifs.slice(0, 2).map((motif: string, idx: number) => (
-                            <div key={idx} className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                              {motif}
-                            </div>
-                          ))}
-                          {match.motifs.length > 2 && (
-                            <span className="text-xs text-gray-500">+{match.motifs.length - 2} autres</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
                     
                     {/* Formations (quelques-unes) */}
                     {lycee.formations && lycee.formations.length > 0 && (
