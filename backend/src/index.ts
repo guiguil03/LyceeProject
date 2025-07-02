@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api';
+import databaseRoutes from './routes/database'; // Nouvelle import
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api', apiRoutes);
+app.use('/api/db', databaseRoutes); // Nouvelles routes BDD
 
 // Route de test
 app.get('/health', (req, res) => {
@@ -51,4 +53,4 @@ app.listen(PORT, () => {
   console.log(`🚀 Serveur backend démarré sur le port ${PORT}`);
   console.log(`📍 URL: http://localhost:${PORT}`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-}); 
+});
