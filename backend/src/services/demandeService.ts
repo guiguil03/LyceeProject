@@ -11,21 +11,61 @@ class DemandeService {
   /**
    * Crée une nouvelle demande de partenariat
    */
-  async createDemande(data: CreateDemandeRequest, userId: string): Promise<string> {
+  async createDemande(data: CreateDemandeRequest, userId: string = 'anonymous'): Promise<string> {
     return await db.transaction(async (client) => {
-      // Insérer la demande
-      const demandeId = await db.insertAndReturnId('Demande', {
+      console.log('DemandeService.createDemande - Données reçues:', JSON.stringify(data, null, 2));
+      console.log('DemandeService.createDemande - UserId reçu:', userId);
+      
+      // Vérifier si entreprise_id est un UUID ou un SIRET
+      let entrepriseId = data.entreprise_id;
+      
+      if (!data.entreprise_id) {
+        throw new Error('entreprise_id est requis');
+      }
+      
+      // Si ce n'est pas un UUID (format SIRET probable), créer ou récupérer l'entreprise
+      if (!this.isValidUUID(data.entreprise_id)) {
+        const siret = data.entreprise_id;
+        
+        // Chercher une entreprise existante avec ce SIRET
+        const existingEntreprise = await db.query(
+          'SELECT id FROM "Entreprise" WHERE siret = $1',
+          [siret]
+        );
+        
+        if (existingEntreprise.rows.length > 0) {
+          entrepriseId = existingEntreprise.rows[0].id;
+        } else {
+          // Créer une entreprise temporaire
+          entrepriseId = await this.createTemporaryEntreprise(siret);
+        }
+      }
+
+      // Insérer la demande avec l'UUID correct
+      const demandeData = {
         ...data,
+        entreprise_id: entrepriseId,
         statut: 'EN_ATTENTE',
         priorite: data.priorite || 'NORMALE'
-      });
+      };
 
-      // Créer l'action de création
-      await db.query(
-        `INSERT INTO "Action" ("demande_id", "user_id", "type_action", "commentaire") 
-         VALUES ($1, $2, $3, $4)`,
-        [demandeId, userId, 'CREATION', 'Demande créée']
-      );
+      const demandeId = await db.insertAndReturnId('Demande', demandeData);
+
+      // Créer l'action de création seulement si userId est un UUID valide
+      if (this.isValidUUID(userId)) {
+        try {
+          await db.query(
+            `INSERT INTO "Action" ("demande_id", "user_id", "type_action", "commentaire") 
+             VALUES ($1, $2, $3, $4)`,
+            [demandeId, userId, 'CREATION', 'Demande créée']
+          );
+        } catch (error) {
+          console.warn('Impossible de créer l\'action (utilisateur invalide):', error);
+          // Continue malgré l'erreur de création d'action
+        }
+      } else {
+        console.warn('User ID invalide, action non créée:', userId);
+      }
 
       return demandeId;
     });
@@ -380,6 +420,36 @@ class DemandeService {
     `, [demandeId]);
 
     return result.rows;
+  }
+
+  /**
+   * Vérifie si une chaîne est un UUID valide
+   */
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  }
+
+  /**
+   * Crée une entreprise temporaire avec les informations minimales
+   */
+  private async createTemporaryEntreprise(siret: string): Promise<string> {
+    const entrepriseData = {
+      nom: `Entreprise ${siret}`,
+      siret: siret,
+      siren: siret.substring(0, 9), // Les 9 premiers caractères du SIRET
+      secteur_activite: 'Secteur non défini',
+      adresse: 'Adresse non renseignée',
+      code_postal: null,
+      commune: null,
+      departement: null,
+      latitude: null,
+      longitude: null
+    };
+
+    const entrepriseId = await db.insertAndReturnId('Entreprise', entrepriseData);
+    console.log(`✅ Entreprise temporaire créée: ${siret} (ID: ${entrepriseId})`);
+    return entrepriseId;
   }
 }
 

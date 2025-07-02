@@ -147,22 +147,49 @@ export default function DemandesPage() {
               <div className="fr-card__body">
                 <div className="fr-card__content">
                   <h3 className="fr-card__title">Nouvelle demande de partenariat</h3>
+                  
+                  {/* Section d'aide */}
+                  <div className="fr-callout fr-callout--info fr-mb-4w">
+                    <h4 className="fr-callout__title">Comment remplir ce formulaire ?</h4>
+                    <p><strong>Entreprise :</strong> Recherchez l'entreprise partenaire par son nom ou SIRET. Si elle n'existe pas, nous la créerons automatiquement.</p>
+                    <p><strong>Type de partenariat :</strong> Stage (immersion courte), Apprentissage (formation en alternance), Projet (collaboration ponctuelle).</p>
+                    <p><strong>Priorité :</strong> Normale pour la plupart des demandes, Haute/Urgente pour les besoins immédiats.</p>
+                  </div>
+                  
                   <form onSubmit={handleCreateDemande}>
                     <div className="fr-grid-row fr-grid-row--gutters">
                       <div className="fr-col-12 fr-col-md-6">
-                        <div className="fr-input-group">
+                        <div className="fr-search-group">
                           <label className="fr-label" htmlFor="entreprise_id">
-                            ID Entreprise *
+                            Entreprise *
+                            <span className="fr-hint-text">Recherchez par nom d'entreprise ou SIRET</span>
                           </label>
-                          <input
-                            className="fr-input"
-                            type="text"
-                            id="entreprise_id"
-                            value={formData.entreprise_id}
-                            onChange={(e) => setFormData({...formData, entreprise_id: e.target.value})}
-                            placeholder="Saisissez l'ID de l'entreprise"
-                            required
-                          />
+                          <div className="fr-search-bar">
+                            <input
+                              className="fr-input"
+                              type="text"
+                              id="entreprise_id"
+                              value={formData.entreprise_id}
+                              onChange={(e) => setFormData({...formData, entreprise_id: e.target.value})}
+                              placeholder="Ex: Renault, 123456789, Boulangerie Martin..."
+                              required
+                            />
+                            <button 
+                              className="fr-btn fr-btn--icon-only fr-icon-search-line" 
+                              type="button"
+                              title="Rechercher une entreprise"
+                              onClick={() => {
+                                // TODO: Ouvrir modal de recherche d'entreprise
+                                alert('Fonctionnalité de recherche à venir !\n\nPour l\'instant, vous pouvez :\n- Saisir un nom d\'entreprise\n- Utiliser un SIRET\n- Ou créer une nouvelle entreprise');
+                              }}
+                            >
+                              Rechercher
+                            </button>
+                          </div>
+                          <div className="fr-hint-text fr-mt-1w">
+                            💡 <strong>Astuce :</strong> Si votre entreprise partenaire n'existe pas encore, 
+                            nous la créerons automatiquement lors de la validation.
+                          </div>
                         </div>
                       </div>
 

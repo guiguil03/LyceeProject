@@ -45,6 +45,23 @@ export interface CreateDemandeRequest {
   priorite?: 'BASSE' | 'NORMALE' | 'HAUTE' | 'URGENTE';
 }
 
+export interface Entreprise {
+  id: string;
+  nom: string;
+  siret?: string;
+  secteur_activite?: string;
+  adresse?: string;
+  ville?: string;
+  description?: string;
+}
+
+export interface SearchEntrepriseRequest {
+  nom?: string;
+  siret?: string;
+  secteur?: string;
+  ville?: string;
+}
+
 export const api = {
   // Recherche de lycées (API externe)
   async searchLycees(criteria: SearchCriteria): Promise<LyceeData[]> {
@@ -308,6 +325,54 @@ export const api = {
       return await response.json();
     } catch (error) {
       console.error('Erreur récupération stats:', error);
+      throw error;
+    }
+  },
+
+  // Recherche d'entreprises
+  async searchEntreprises(criteria: SearchEntrepriseRequest): Promise<Entreprise[]> {
+    try {
+      const params = new URLSearchParams();
+      if (criteria.nom) params.append('nom', criteria.nom);
+      if (criteria.siret) params.append('siret', criteria.siret);
+      if (criteria.secteur) params.append('secteur', criteria.secteur);
+      if (criteria.ville) params.append('ville', criteria.ville);
+
+      const response = await fetch(`${API_BASE_URL}/api/db/entreprises/search?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Erreur recherche entreprises:', error);
+      throw error;
+    }
+  },
+
+  // Obtenir toutes les entreprises
+  async getEntreprises(filters?: Record<string, unknown>) {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/db/entreprises?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erreur récupération entreprises:', error);
       throw error;
     }
   }
