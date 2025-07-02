@@ -6,7 +6,8 @@ ENV POSTGRES_DB=lyceeproject
 ENV POSTGRES_USER=postgres
 ENV POSTGRES_PASSWORD=password
 
-# Copier le script d'initialisation
+# Copier les scripts d'initialisation
+COPY init.sql/* /docker-entrypoint-initdb.d/
 
 # Exposer le port standard PostgreSQL
 EXPOSE 5432

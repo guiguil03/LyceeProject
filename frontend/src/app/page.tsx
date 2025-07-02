@@ -7,7 +7,7 @@ export default function HomePage() {
   const router = useRouter();
 
   const handleStartSearch = () => {
-    router.push('/search');
+    router.push('/login');
   };
 
   return (

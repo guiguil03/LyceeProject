@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api';
+import './config/database'; // Initialiser la connexion à la base de données
 
 // Charger les variables d'environnement
 dotenv.config();

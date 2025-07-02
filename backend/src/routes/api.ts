@@ -2,8 +2,12 @@ import express from 'express';
 import matchingService, { MatchingCriteria } from '../services/matchingService';
 import lyceeService from '../services/lyceeService';
 import siretService from '../services/siretService';
+import authRoutes from './auth';
 
 const router = express.Router();
+
+// Routes d'authentification
+router.use('/auth', authRoutes);
 
 // Route principale pour le frontend
 router.post('/matching', async (req, res) => {
