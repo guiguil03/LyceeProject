@@ -1,5 +1,5 @@
 // Service API pour les appels vers le backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export interface LyceeData {
   nom: string;
@@ -66,7 +66,7 @@ export const api = {
   // Recherche de lycées (API externe)
   async searchLycees(criteria: SearchCriteria): Promise<LyceeData[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/lycees/search`, {
+      const response = await fetch(`${API_BASE_URL}/lycees/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export const api = {
   // Matching entre entreprises et lycées (API externe)
   async findMatching(criteria: Record<string, unknown>): Promise<Record<string, unknown>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/matching`, {
+      const response = await fetch(`${API_BASE_URL}/matching`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export const api = {
   // Obtenir les détails d'un lycée (API externe)
   async getLyceeDetails(id: string): Promise<LyceeData | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/lycees/${id}`);
+      const response = await fetch(`${API_BASE_URL}/lycees/${id}`);
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
