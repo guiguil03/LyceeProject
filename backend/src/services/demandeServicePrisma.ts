@@ -1,5 +1,5 @@
 import PrismaService from './prismaService';
-import { PrismaClient, Demande, DemandeLycee, User, Entreprise, Lycee, Metier, Domaine } from '../generated/prisma';
+import { PrismaClient, Demande, DemandeLycee, User, Entreprise, Lycee, Metier, Domaine, Action, Prisma } from '../generated/prisma';
 import bcrypt from 'bcryptjs';
 
 interface CreateDemandeRequest {
@@ -63,7 +63,7 @@ class DemandeServicePrisma {
    * Crée une nouvelle demande de partenariat
    */
   async createDemande(data: CreateDemandeRequest, userId?: string): Promise<string> {
-    return await this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       console.log('DemandeServicePrisma.createDemande - Données reçues:', JSON.stringify(data, null, 2));
       console.log('DemandeServicePrisma.createDemande - UserId reçu:', userId);
       
@@ -175,7 +175,10 @@ class DemandeServicePrisma {
       secteur_activite: demande.entreprise.secteurActivite,
       metier_nom: demande.metier?.nom,
       domaine_nom: demande.metier?.domaine?.nom,
-      lycees: demande.demandeLycees.map(dl => ({
+      lycees: demande.demandeLycees.map((dl: DemandeLycee & {
+        lycee: Lycee;
+        userTraitement: { id: string; fullName: string | null; email: string } | null;
+      }) => ({
         ...dl,
         lycee_nom: dl.lycee.nom,
         lycee_adresse: dl.lycee.adresse,
@@ -188,7 +191,7 @@ class DemandeServicePrisma {
    * Met à jour une demande
    */
   async updateDemande(id: string, data: UpdateDemandeRequest, userId: string): Promise<boolean> {
-    return await this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Récupérer l'état actuel
       const currentDemande = await tx.demande.findUnique({
         where: { id }
@@ -237,7 +240,7 @@ class DemandeServicePrisma {
     const skip = (page - 1) * limit;
 
     // Construction des filtres WHERE
-    const where: any = {};
+    const where: Prisma.DemandeWhereInput = {};
 
     if (filters.entreprise_id) {
       where.entrepriseId = filters.entreprise_id;
@@ -313,7 +316,10 @@ class DemandeServicePrisma {
     });
 
     return {
-      demandes: demandes.map(d => ({
+      demandes: demandes.map((d: Demande & {
+        entreprise: { nom: string; secteurActivite: string | null };
+        metier: { nom: string } | null;
+      }) => ({
         ...d,
         entreprise_nom: d.entreprise.nom,
         secteur_activite: d.entreprise.secteurActivite,
@@ -332,7 +338,7 @@ class DemandeServicePrisma {
     userId: string,
     options?: { note?: string; auto_score?: boolean }
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Créer les associations demande-lycée
       for (const lyceeId of lyceeIds) {
         await tx.demandeLycee.upsert({
@@ -377,7 +383,7 @@ class DemandeServicePrisma {
     userId: string,
     note?: string
   ): Promise<boolean> {
-    return await this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const demandeLycee = await tx.demandeLycee.findUnique({
         where: { id: demandeLyceeId }
       });
@@ -416,7 +422,7 @@ class DemandeServicePrisma {
     date_debut?: string;
     date_fin?: string;
   }): Promise<DemandeStats> {
-    const where: any = {};
+    const where: Prisma.DemandeWhereInput = {};
 
     if (filters?.entreprise_id) {
       where.entrepriseId = filters.entreprise_id;
@@ -445,11 +451,11 @@ class DemandeServicePrisma {
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
     // Créer les conditions pour la requête mensuelle
-    const monthlyWhere = { ...where };
-    if (!monthlyWhere.dateCreation) {
+    const monthlyWhere: Prisma.DemandeWhereInput = { ...where };
+    if (!monthlyWhere.dateCreation || typeof monthlyWhere.dateCreation === 'string' || monthlyWhere.dateCreation instanceof Date) {
       monthlyWhere.dateCreation = {};
     }
-    if (!monthlyWhere.dateCreation.gte) {
+    if (!('gte' in monthlyWhere.dateCreation)) {
       monthlyWhere.dateCreation.gte = twelveMonthsAgo;
     }
 
@@ -463,7 +469,7 @@ class DemandeServicePrisma {
 
     // Grouper par mois
     const monthlyCount = new Map<string, number>();
-    demandesForMonths.forEach(demande => {
+    demandesForMonths.forEach((demande: { dateCreation: Date | null }) => {
       if (demande.dateCreation) {
         const monthStr = demande.dateCreation.toISOString().slice(0, 7); // Format YYYY-MM
         monthlyCount.set(monthStr, (monthlyCount.get(monthStr) || 0) + 1);
@@ -527,7 +533,10 @@ class DemandeServicePrisma {
       }
     });
 
-    return actions.map(action => ({
+    return actions.map((action: Action & {
+      user: { fullName: string | null; email: string };
+      demandeLycee: { lycee: { nom: string } } | null;
+    }) => ({
       ...action,
       user_nom: action.user.fullName,
       user_email: action.user.email,

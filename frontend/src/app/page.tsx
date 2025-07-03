@@ -40,8 +40,8 @@ export default function HomePage() {
               </h1>
               
               <p className="fr-text--lead fr-mb-6w">
-                Une plateforme dédiée aux partenariats entre le monde professionnel et l'enseignement technique. 
-                Créez des collaborations durables pour l'insertion professionnelle des jeunes.
+                Une plateforme dédiée aux partenariats entre le monde professionnel et l&apos;enseignement technique. 
+                Créez des collaborations durables pour l&apos;insertion professionnelle des jeunes.
               </p>
 
                              {!isAuthenticated ? (
@@ -132,6 +132,12 @@ export default function HomePage() {
                            className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
                          >
                            Rechercher lycées
+                         </button>
+                         <button 
+                           onClick={() => router.push('/lycees/profils')}
+                           className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-building-line"
+                         >
+                           Profils lycées
                          </button>
                        </>
                      ) : (
@@ -291,13 +297,13 @@ export default function HomePage() {
                         <div className="fr-btns-group">
                           <button 
                             className="fr-btn fr-btn--secondary"
-                            onClick={() => handleProfileSelection('entreprise')}
+                            onClick={() => router.push('/auth?type=entreprise')}
                           >
                             Je suis une entreprise
                           </button>
                           <button 
                             className="fr-btn fr-btn--secondary"
-                            onClick={() => handleProfileSelection('lycee')}
+                            onClick={() => router.push('/auth?type=lycee')}
                           >
                             Je suis un lycée
                           </button>

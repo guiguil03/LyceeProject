@@ -49,6 +49,12 @@ export default function CompactQuickActions() {
           path: '/search'
         },
         {
+          id: 'profils-lycees',
+          label: 'Profils lycées',
+          icon: 'fr-icon-building-line',
+          path: '/lycees/profils'
+        },
+        {
           id: 'mes-demandes',
           label: 'Mes demandes',
           icon: 'fr-icon-file-text-line',

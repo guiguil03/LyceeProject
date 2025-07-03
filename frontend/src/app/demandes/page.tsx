@@ -55,6 +55,28 @@ export default function DemandesPage() {
     }
   }, [user]);
 
+  // Pré-remplir le lycée si spécifié dans l'URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const lyceeUai = urlParams.get('lycee_uai');
+    
+    if (lyceeUai) {
+      console.log('🎯 Lycée pré-sélectionné via URL:', lyceeUai);
+      // Ouvrir automatiquement le formulaire
+      setShowCreateForm(true);
+      // Pré-remplir l'UAI
+      setFormData(prev => ({ ...prev, lycee_uai: lyceeUai }));
+      
+      // Essayer de trouver le nom du lycée pour l'affichage
+      if (lycees.length > 0) {
+        const lycee = lycees.find(l => l.numero_uai === lyceeUai);
+        if (lycee) {
+          setSearchLycee(`${lycee.nom_etablissement} - ${lycee.libelle_commune}`);
+        }
+      }
+    }
+  }, [lycees]); // Dépendre de lycees pour pouvoir trouver le nom
+
   // Filtrer les lycées selon la recherche
   useEffect(() => {
     if (searchLycee.trim() === '') {

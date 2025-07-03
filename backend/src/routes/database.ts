@@ -393,7 +393,7 @@ router.get('/lycees', async (req, res) => {
     ]);
 
     // Transformation des données pour correspondre à l'ancien format
-    const lyceesWithCount = lycees.map(lycee => ({
+    const lyceesWithCount = lycees.map((lycee: any) => ({
       ...lycee,
       region_nom: lycee.region?.nom || null,
       nb_formations: lycee.formations.length
@@ -449,7 +449,7 @@ router.get('/lycees/:id', async (req, res) => {
     const response = {
       ...lycee,
       region_nom: lycee.region?.nom || null,
-      formations: lycee.formations.map(f => ({
+      formations: lycee.formations.map((f: any) => ({
         ...f,
         domaine_nom: f.domaine?.nom || null,
         metier_nom: f.metier?.nom || null
@@ -515,7 +515,7 @@ router.get('/entreprises', async (req, res) => {
     ]);
 
     // Transformation des données pour correspondre à l'ancien format
-    const entreprisesWithCount = entreprises.map(entreprise => ({
+    const entreprisesWithCount = entreprises.map((entreprise: any) => ({
       ...entreprise,
       nb_demandes: entreprise.demandes.length
     }));
@@ -614,7 +614,7 @@ router.get('/metiers', async (req, res) => {
     });
 
     // Transformation des données pour correspondre à l'ancien format
-    const metiersWithDomaine = metiers.map(metier => ({
+    const metiersWithDomaine = metiers.map((metier: any) => ({
       ...metier,
       domaine_nom: metier.domaine?.nom || null
     }));
