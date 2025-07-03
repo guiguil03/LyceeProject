@@ -43,6 +43,7 @@ const LyceePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("metiers");
   const [lyceeData, setLyceeData] = useState<LyceeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showApiWarning, setShowApiWarning] = useState(false);
 
   // Redirection si non connecté ou pas un lycée
   useEffect(() => {
@@ -64,21 +65,26 @@ const LyceePage: React.FC = () => {
       
       if (!user?.uai) {
         console.error('UAI manquant pour le lycée');
-        setLyceeData(null);
+        // Utiliser des données par défaut si l'UAI est manquant
+        setLyceeData(getDefaultLyceeData(user?.name || 'Mon Lycée'));
+        setShowApiWarning(true);
         return;
       }
+
+      console.log('🔍 Chargement des données pour le lycée UAI:', user.uai);
 
       // Appel API réel avec l'UAI du lycée
       const response = await fetch(`http://localhost:3001/api/lycees/${user.uai}`);
       const data = await response.json();
       
-      if (data.success) {
+      if (response.ok && data.success) {
+        console.log('✅ Données lycée trouvées:', data.data);
         // Transformer les données de l'API vers notre format local
         const apiLycee = data.data;
         setLyceeData({
           nom: apiLycee.nom_etablissement || user?.name || 'Lycée Henri Senez',
           codeUai: apiLycee.numero_uai || user.uai,
-                  ville: apiLycee.localite_acheminement_uai || 'Hénin-Beaumont',
+          ville: apiLycee.localite_acheminement_uai || 'Hénin-Beaumont',
           codePostal: apiLycee.code_postal_uai || '62110',
           adresse: apiLycee.adresse_1 || '553 rue Fernand Darchicourt',
           telephone: apiLycee.telephone || '03 21 20 61 61',
@@ -86,78 +92,104 @@ const LyceePage: React.FC = () => {
           siteWeb: apiLycee.site_web || 'www.lyceesenez.fr',
           secteur: apiLycee.secteur_public_prive_libe || 'Public',
           academie: apiLycee.libelle_academie || 'Lille',
-        description: 'Lycée professionnel spécialisé dans les métiers de l\u0027industrie et des services.',
-        stats: {
-          eleves: 1200,
-          apprentis: 400,
-          adultes: 200,
-          stages: 2400,
-          entreprises: 400,
-          satisfaction: 90,
-        },
-                  formations: apiLycee.formations && apiLycee.formations.length > 0 ? apiLycee.formations : [
+          description: 'Lycée professionnel spécialisé dans les métiers de l\u0027industrie et des services.',
+          stats: {
+            eleves: 1200,
+            apprentis: 400,
+            adultes: 200,
+            stages: 2400,
+            entreprises: 400,
+            satisfaction: 90,
+          },
+          formations: apiLycee.formations && apiLycee.formations.length > 0 ? apiLycee.formations : [
             'Hôtellerie Restauration: Cuisine, Service, Réception',
             'Gestion Relation Client: Commerce, Vente, Accueil, Administration',
             'Mécanique Automobile',
             'Industrie Chaudronnerie: Chaudronniers Soudeurs',
             'Métiers de la sécurité',
           ],
-        installations: [
-          {
-            nom: 'Atelier de maintenance industrielle',
-            surface: '500m²',
-            equipements: 'Machines industrielles, bancs d\'essai, automates programmables'
-          },
-          {
-            nom: 'Restaurant d\'application',
-            surface: '300m²',
-            equipements: 'Cuisine professionnelle, salle de restaurant, bar'
-          },
-          {
-            nom: 'Garage automobile',
-            surface: '400m²',
-            equipements: 'Ponts élévateurs, équipements de diagnostic'
-          },
-          {
-            nom: 'Atelier de chaudronnerie',
-            surface: '600m²',
-            equipements: 'Postes de soudage, plieuses, découpeuses plasma'
-          }
-        ],
-        actions: [
-          {
-            titre: 'Semaine de l\'industrie',
-            description: 'Découverte des métiers industriels pour tous les élèves'
-          },
-          {
-            titre: 'Concours de cuisine',
-            description: 'Participation aux olympiades des métiers'
-          },
-          {
-            titre: 'Forum des métiers',
-            description: 'Rencontres avec des professionnels'
-          },
-          {
-            titre: 'Stages à l\'étranger',
-            description: 'Mobilité européenne Erasmus+'
-          }
-        ],
-        partenaires: [
-          'APERAM', 'ENGIE', 'Total Energies', 'ArcelorMittal',
-          'Veolia', 'Suez', 'Bouygues Construction', 'Vinci',
-          'Norpac', 'Auchan', 'Leroy Merlin', 'Metro'
-        ]
+          installations: getDefaultInstallations(),
+          actions: getDefaultActions(),
+          partenaires: getDefaultPartenaires()
         });
       } else {
-        console.error('Erreur API:', data.error);
-        setLyceeData(null);
+        console.warn('⚠️ Lycée non trouvé dans l\'API, utilisation des données par défaut');
+        console.log('Réponse API:', { status: response.status, data });
+        
+        // Utiliser des données par défaut si le lycée n'est pas trouvé
+        setLyceeData(getDefaultLyceeData(user?.name || `Lycée ${user.uai}`));
+        setShowApiWarning(true);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('❌ Erreur lors du chargement des données lycée:', error);
+      // En cas d'erreur réseau ou autre, utiliser des données par défaut
+      setLyceeData(getDefaultLyceeData(user?.name || 'Mon Lycée'));
+      setShowApiWarning(true);
     } finally {
       setLoading(false);
     }
   };
+
+  // Fonction pour générer des données par défaut
+  const getDefaultLyceeData = (nom: string): LyceeData => ({
+    nom,
+    codeUai: user?.uai || '0000000X',
+    ville: 'Ville non renseignée',
+    codePostal: '00000',
+    adresse: 'Adresse non renseignée',
+    telephone: 'Téléphone non renseigné',
+    email: 'Email non renseigné',
+    siteWeb: 'Site web non renseigné',
+    secteur: 'Public',
+    academie: 'Académie non renseignée',
+    description: 'Lycée professionnel en cours de configuration. Les informations détaillées seront bientôt disponibles.',
+    stats: {
+      eleves: 0,
+      apprentis: 0,
+      adultes: 0,
+      stages: 0,
+      entreprises: 0,
+      satisfaction: 0,
+    },
+    formations: [
+      'Formations en cours de mise à jour...'
+    ],
+    installations: getDefaultInstallations(),
+    actions: getDefaultActions(),
+    partenaires: getDefaultPartenaires()
+  });
+
+  const getDefaultInstallations = () => [
+    {
+      nom: 'Ateliers techniques',
+      surface: 'Information en cours de mise à jour',
+      equipements: 'Équipements en cours d\'inventaire'
+    },
+    {
+      nom: 'Salles de formation',
+      surface: 'Information en cours de mise à jour',
+      equipements: 'Matériel pédagogique moderne'
+    }
+  ];
+
+  const getDefaultActions = () => [
+    {
+      titre: 'Journées portes ouvertes',
+      description: 'Découverte de l\'établissement et des formations'
+    },
+    {
+      titre: 'Forums des métiers',
+      description: 'Rencontres avec des professionnels'
+    },
+    {
+      titre: 'Stages en entreprise',
+      description: 'Immersion professionnelle des élèves'
+    }
+  ];
+
+  const getDefaultPartenaires = () => [
+    'Partenaires en cours de mise à jour'
+  ];
 
   // Afficher un loader pendant le chargement de l'authentification
   if (isLoading) {
@@ -333,6 +365,37 @@ const LyceePage: React.FC = () => {
 
   return (
     <div className="fr-container fr-py-6w">
+      {/* Alerte si données par défaut */}
+      {showApiWarning && (
+        <div className="fr-alert fr-alert--warning fr-mb-4w">
+          <p className="fr-alert__title">
+            <span className="fr-icon-information-line fr-mr-1w" aria-hidden="true"></span>
+            Informations provisoires
+          </p>
+          <p>
+            Les données de votre lycée ne sont pas encore disponibles dans notre base. 
+            Des informations par défaut sont affichées. Vos données seront mises à jour prochainement.
+          </p>
+          <div className="fr-btns-group fr-btns-group--sm">
+            <button 
+              className="fr-btn fr-btn--sm"
+              onClick={() => {
+                setShowApiWarning(false);
+                loadLyceeData();
+              }}
+            >
+              Réessayer
+            </button>
+            <button 
+              className="fr-btn fr-btn--sm fr-btn--tertiary"
+              onClick={() => setShowApiWarning(false)}
+            >
+              Fermer cette alerte
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* En-tête avec bouton retour et gestion profil */}
       <div className="fr-mb-4w">
         <div className="fr-grid-row fr-grid-row--middle fr-grid-row--gutters">
