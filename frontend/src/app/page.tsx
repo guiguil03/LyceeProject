@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomePage() {
   const router = useRouter();
   const [selectedProfile, setSelectedProfile] = useState<'entreprise' | 'lycee' | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // TODO: Gérer avec un contexte auth
+  const { isAuthenticated, user, logout } = useAuth();
 
   const handleProfileSelection = (profile: 'entreprise' | 'lycee') => {
     setSelectedProfile(profile);
@@ -49,85 +50,101 @@ export default function HomePage() {
                 Créez des collaborations durables pour l'insertion professionnelle des jeunes.
               </p>
 
-              {!isAuthenticated ? (
-                // Section choix de profil pour non-connectés
-                <div className="fr-mb-6w">
-                  <h3 className="fr-h3 fr-mb-4w">Je suis :</h3>
-                  <div className="fr-grid-row fr-grid-row--gutters">
-                    <div className="fr-col-12 fr-col-md-6">
-                      <div className={`fr-card fr-card--horizontal ${selectedProfile === 'entreprise' ? 'fr-card--selected' : ''}`}>
-                        <div className="fr-card__body">
-                          <div className="fr-card__content">
-                            <h4 className="fr-card__title">
-                              <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
-                              Une entreprise
-                            </h4>
-                            <p className="fr-card__desc">
-                              Je souhaite créer des partenariats avec des lycées professionnels pour des stages, alternances ou projets.
-                            </p>
-                            <div className="fr-card__footer">
-                              <button 
-                                className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                onClick={() => handleProfileSelection('entreprise')}
-                              >
-                                Accéder - Entreprise
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="fr-col-12 fr-col-md-6">
-                      <div className={`fr-card fr-card--horizontal ${selectedProfile === 'lycee' ? 'fr-card--selected' : ''}`}>
-                        <div className="fr-card__body">
-                          <div className="fr-card__content">
-                            <h4 className="fr-card__title">
-                              <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
-                              Un lycée professionnel
-                            </h4>
-                            <p className="fr-card__desc">
-                              Je représente un établissement et je souhaite développer des partenariats avec les entreprises.
-                            </p>
-                            <div className="fr-card__footer">
-                              <button 
-                                className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                onClick={() => handleProfileSelection('lycee')}
-                              >
-                                Accéder - Lycée
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Section actions pour utilisateurs connectés
-                <div className="fr-mb-6w">
-                  <div className="fr-btns-group fr-btns-group--center">
-                    <button 
-                      onClick={handleCreateDemande}
-                      className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-add-line"
-                    >
-                      Créer une demande
-                    </button>
-                    <button 
-                      onClick={handleDashboard}
-                      className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
-                    >
-                      Mon tableau de bord
-                    </button>
-                    <button 
-                      onClick={handleSearch}
-                      className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
-                    >
-                      Rechercher
-                    </button>
-                  </div>
-                </div>
-              )}
+                             {!isAuthenticated ? (
+                 // Section choix de profil pour non-connectés
+                 <div className="fr-mb-6w">
+                   <h3 className="fr-h3 fr-mb-4w">Je suis :</h3>
+                   <div className="fr-grid-row fr-grid-row--gutters">
+                     <div className="fr-col-12 fr-col-md-6">
+                       <div className={`fr-card fr-card--horizontal ${selectedProfile === 'entreprise' ? 'fr-card--selected' : ''}`}>
+                         <div className="fr-card__body">
+                           <div className="fr-card__content">
+                             <h4 className="fr-card__title">
+                               <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
+                               Une entreprise
+                             </h4>
+                             <p className="fr-card__desc">
+                               Je souhaite créer des partenariats avec des lycées professionnels pour des stages, alternances ou projets.
+                             </p>
+                             <div className="fr-card__footer">
+                               <button 
+                                 className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
+                                 onClick={() => handleProfileSelection('entreprise')}
+                               >
+                                 Se connecter
+                               </button>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     
+                     <div className="fr-col-12 fr-col-md-6">
+                       <div className={`fr-card fr-card--horizontal ${selectedProfile === 'lycee' ? 'fr-card--selected' : ''}`}>
+                         <div className="fr-card__body">
+                           <div className="fr-card__content">
+                             <h4 className="fr-card__title">
+                               <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
+                               Un lycée professionnel
+                             </h4>
+                             <p className="fr-card__desc">
+                               Je représente un établissement et je souhaite développer des partenariats avec les entreprises.
+                             </p>
+                             <div className="fr-card__footer">
+                               <button 
+                                 className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
+                                 onClick={() => handleProfileSelection('lycee')}
+                               >
+                                 Se connecter
+                               </button>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+                              ) : (
+                 // Section actions pour utilisateurs connectés
+                 <div className="fr-mb-6w">
+                   <div className="fr-callout fr-callout--success">
+                     <h3 className="fr-callout__title">
+                       <span className="fr-icon-user-line fr-mr-1w" aria-hidden="true"></span>
+                       Connecté en tant que {user?.type === 'entreprise' ? 'Entreprise' : 'Lycée'}
+                     </h3>
+                     <p className="fr-callout__text">
+                       Bienvenue {user?.name} ! Utilisez le menu en haut à droite pour accéder à vos fonctionnalités.
+                     </p>
+                   </div>
+                   
+                   <div className="fr-btns-group fr-btns-group--center fr-mt-4w">
+                     <button 
+                       onClick={handleCreateDemande}
+                       className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-add-line"
+                     >
+                       Créer une demande
+                     </button>
+                     <button 
+                       onClick={handleDashboard}
+                       className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
+                     >
+                       Mon tableau de bord
+                     </button>
+                     <button 
+                       onClick={handleSearch}
+                       className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
+                     >
+                       Rechercher
+                     </button>
+                     <button 
+                       onClick={logout}
+                       className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-logout-box-r-line"
+                     >
+                       Se déconnecter
+                     </button>
+                   </div>
+                 </div>
+               )}
               
               <div className="fr-btns-group fr-btns-group--center">
                 <a 
