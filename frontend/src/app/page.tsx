@@ -1,17 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HomePage() {
   const router = useRouter();
-  const [selectedProfile, setSelectedProfile] = useState<'entreprise' | 'lycee' | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // TODO: Gérer avec un contexte auth
-
-  const handleProfileSelection = (profile: 'entreprise' | 'lycee') => {
-    setSelectedProfile(profile);
-    router.push(`/auth?type=${profile}`);
-  };
+  const { isAuthenticated, user, logout } = useAuth();
 
   const handleCreateDemande = () => {
     router.push('/demandes');
@@ -49,85 +44,122 @@ export default function HomePage() {
                 Créez des collaborations durables pour l'insertion professionnelle des jeunes.
               </p>
 
-              {!isAuthenticated ? (
-                // Section choix de profil pour non-connectés
-                <div className="fr-mb-6w">
-                  <h3 className="fr-h3 fr-mb-4w">Je suis :</h3>
-                  <div className="fr-grid-row fr-grid-row--gutters">
-                    <div className="fr-col-12 fr-col-md-6">
-                      <div className={`fr-card fr-card--horizontal ${selectedProfile === 'entreprise' ? 'fr-card--selected' : ''}`}>
-                        <div className="fr-card__body">
-                          <div className="fr-card__content">
-                            <h4 className="fr-card__title">
-                              <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
-                              Une entreprise
-                            </h4>
-                            <p className="fr-card__desc">
-                              Je souhaite créer des partenariats avec des lycées professionnels pour des stages, alternances ou projets.
-                            </p>
-                            <div className="fr-card__footer">
-                              <button 
-                                className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                onClick={() => handleProfileSelection('entreprise')}
-                              >
-                                Accéder - Entreprise
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="fr-col-12 fr-col-md-6">
-                      <div className={`fr-card fr-card--horizontal ${selectedProfile === 'lycee' ? 'fr-card--selected' : ''}`}>
-                        <div className="fr-card__body">
-                          <div className="fr-card__content">
-                            <h4 className="fr-card__title">
-                              <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
-                              Un lycée professionnel
-                            </h4>
-                            <p className="fr-card__desc">
-                              Je représente un établissement et je souhaite développer des partenariats avec les entreprises.
-                            </p>
-                            <div className="fr-card__footer">
-                              <button 
-                                className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                onClick={() => handleProfileSelection('lycee')}
-                              >
-                                Accéder - Lycée
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Section actions pour utilisateurs connectés
-                <div className="fr-mb-6w">
-                  <div className="fr-btns-group fr-btns-group--center">
-                    <button 
-                      onClick={handleCreateDemande}
-                      className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-add-line"
-                    >
-                      Créer une demande
-                    </button>
-                    <button 
-                      onClick={handleDashboard}
-                      className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
-                    >
-                      Mon tableau de bord
-                    </button>
-                    <button 
-                      onClick={handleSearch}
-                      className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
-                    >
-                      Rechercher
-                    </button>
-                  </div>
-                </div>
-              )}
+                             {!isAuthenticated ? (
+                 // Section choix de profil pour non-connectés
+                 <div className="fr-mb-6w">
+                   <h3 className="fr-h3 fr-mb-4w">Je suis :</h3>
+                   <div className="fr-grid-row fr-grid-row--gutters">
+                     <div className="fr-col-12 fr-col-md-6">
+                       <div className="fr-card fr-card--horizontal">
+                         <div className="fr-card__body">
+                           <div className="fr-card__content">
+                             <h4 className="fr-card__title">
+                               <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
+                               Une entreprise
+                             </h4>
+                             <p className="fr-card__desc">
+                               Je souhaite créer des partenariats avec des lycées professionnels pour des stages, alternances ou projets.
+                             </p>
+                             <div className="fr-card__footer">
+                               <button 
+                                 className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
+                                 onClick={() => router.push('/auth?type=entreprise')}
+                               >
+                                 Se connecter
+                               </button>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     
+                     <div className="fr-col-12 fr-col-md-6">
+                       <div className="fr-card fr-card--horizontal">
+                         <div className="fr-card__body">
+                           <div className="fr-card__content">
+                             <h4 className="fr-card__title">
+                               <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
+                               Un lycée professionnel
+                             </h4>
+                             <p className="fr-card__desc">
+                               Je représente un établissement et je souhaite développer des partenariats avec les entreprises.
+                             </p>
+                             <div className="fr-card__footer">
+                               <button 
+                                 className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
+                                 onClick={() => router.push('/auth?type=lycee')}
+                               >
+                                 Se connecter
+                               </button>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+                              ) : (
+                 // Section actions pour utilisateurs connectés
+                 <div className="fr-mb-6w">
+                   <div className="fr-callout fr-callout--success">
+                     <h3 className="fr-callout__title">
+                       <span className="fr-icon-user-line fr-mr-1w" aria-hidden="true"></span>
+                       Connecté en tant que {user?.type === 'entreprise' ? 'Entreprise' : 'Lycée'}
+                     </h3>
+                     <p className="fr-callout__text">
+                       Bienvenue {user?.name} ! Utilisez le menu en haut à droite pour accéder à vos fonctionnalités.
+                     </p>
+                   </div>
+                   
+                   <div className="fr-btns-group fr-btns-group--center fr-mt-4w">
+                     <button 
+                       onClick={handleDashboard}
+                       className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
+                     >
+                       Mon tableau de bord
+                     </button>
+                     
+                     {user?.type === 'entreprise' ? (
+                       <>
+                         <button 
+                           onClick={handleCreateDemande}
+                           className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-add-line"
+                         >
+                           Créer une demande
+                         </button>
+                         <button 
+                           onClick={handleSearch}
+                           className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
+                         >
+                           Rechercher lycées
+                         </button>
+                       </>
+                     ) : (
+                       <>
+                         <button 
+                           onClick={() => router.push('/lycee')}
+                           className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-school-line"
+                         >
+                           Mon lycée
+                         </button>
+                         <button 
+                           onClick={() => router.push('/lycee/profil')}
+                           className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-settings-5-line"
+                         >
+                           Gérer mon profil
+                         </button>
+                       </>
+                     )}
+                     
+                     <button 
+                       onClick={logout}
+                       className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-logout-box-r-line"
+                     >
+                       Se déconnecter
+                     </button>
+                   </div>
+                 </div>
+               )}
               
               <div className="fr-btns-group fr-btns-group--center">
                 <a 
@@ -137,6 +169,7 @@ export default function HomePage() {
                   Découvrir la plateforme
                 </a>
               </div>
+
             </div>
           </div>
         </div>
@@ -155,64 +188,8 @@ export default function HomePage() {
             </div>
           </div>
           
-          <div className="fr-grid-row fr-grid-row--gutters">
-            
-            {/* Pour les entreprises */}
-            <div className="fr-col-12 fr-col-md-6">
-              <div className="fr-card fr-card--no-arrow fr-card--border">
-                <div className="fr-card__body">
-                  <div className="fr-card__content">
-                    <h3 className="fr-card__title">
-                      <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
-                      Pour les entreprises
-                    </h3>
-                    <ul className="fr-mb-4w">
-                      <li>Créer des demandes de partenariat</li>
-                      <li>Rechercher des lycées par secteur</li>
-                      <li>Proposer des stages et alternances</li>
-                      <li>Suivre vos collaborations</li>
-                    </ul>
-                    <div className="fr-btns-group">
-                      <button 
-                        className="fr-btn fr-btn--sm fr-btn--icon-left fr-icon-add-line"
-                        onClick={handleCreateDemande}
-                      >
-                        Créer une demande
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Pour les lycées */}
-            <div className="fr-col-12 fr-col-md-6">
-              <div className="fr-card fr-card--no-arrow fr-card--border">
-                <div className="fr-card__body">
-                  <div className="fr-card__content">
-                    <h3 className="fr-card__title">
-                      <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
-                      Pour les lycées
-                    </h3>
-                    <ul className="fr-mb-4w">
-                      <li>Consulter les demandes d'entreprises</li>
-                      <li>Gérer votre profil établissement</li>
-                      <li>Proposer vos formations</li>
-                      <li>Développer votre réseau professionnel</li>
-                    </ul>
-                    <div className="fr-btns-group">
-                      <button 
-                        className="fr-btn fr-btn--sm fr-btn--secondary fr-btn--icon-left fr-icon-search-line"
-                        onClick={handleSearch}
-                      >
-                        Voir les demandes
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+         
+          
 
           {/* Fonctionnalités techniques */}
           <div className="fr-grid-row fr-grid-row--gutters fr-mt-6w">
@@ -277,11 +254,11 @@ export default function HomePage() {
               <div className="fr-grid-row fr-grid-row--gutters">
                 <div className="fr-col-12 fr-col-md-6">
                   <p className="fr-text--lg fr-mb-4w">
-                    Notre plateforme connecte le monde de l'entreprise et l'enseignement professionnel 
-                    pour créer des opportunités d'insertion réussies pour les jeunes.
+                    Notre plateforme connecte le monde de l&apos;entreprise et l&apos;enseignement professionnel 
+                    pour créer des opportunités d&apos;insertion réussies pour les jeunes.
                   </p>
                   <p>
-                    Basée sur les données officielles du ministère de l'Éducation nationale, 
+                    Basée sur les données officielles du ministère de l&apos;Éducation nationale, 
                     elle facilite la mise en relation et le suivi des partenariats éducatifs.
                   </p>
                 </div>
@@ -290,12 +267,12 @@ export default function HomePage() {
                   <div className="fr-callout">
                     <h4 className="fr-callout__title">Fonctionnalités clés</h4>
                     <ul>
-                      <li>🤝 Mise en relation entreprises/lycées</li>
-                      <li>📋 Gestion des demandes de partenariat</li>
-                      <li>🎯 Matching automatique par secteur</li>
-                      <li>📊 Tableau de bord de suivi</li>
-                      <li>🗺️ Recherche géographique avancée</li>
-                      <li>🔐 Authentification sécurisée</li>
+                      <li> Mise en relation entreprises/lycées</li>
+                      <li> Gestion des demandes de partenariat</li>
+                      <li> Matching automatique par secteur</li>
+                      <li> Tableau de bord de suivi</li>
+                      <li> Recherche géographique avancée</li>
+                      <li> Authentification sécurisée</li>
                     </ul>
                   </div>
                 </div>

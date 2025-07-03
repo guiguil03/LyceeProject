@@ -2,12 +2,766 @@ import express from 'express';
 import matchingService, { MatchingCriteria } from '../services/matchingService';
 import lyceeService from '../services/lyceeService';
 import siretService from '../services/siretService';
-import authRoutes from './auth';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
-// Routes d'authentification
-router.use('/auth', authRoutes);
+// Clé secrète pour JWT (en production, utilisez une variable d'environnement)
+const JWT_SECRET = process.env.JWT_SECRET || 'votre-cle-secrete-jwt';
+
+// Base de données simulée pour les utilisateurs (remplacer par une vraie DB)
+const users: Array<{
+  id: string;
+  email: string;
+  password: string;
+  name: string;
+  type: 'entreprise' | 'lycee';
+  uai?: string; // Code UAI pour les lycées
+  siret?: string; // SIRET pour les entreprises
+}> = [];
+
+// Base de données simulée pour les demandes
+const demandes: Array<{
+  id: string;
+  entreprise_id: string;
+  lycee_uai?: string;
+  titre: string;
+  description: string;
+  type_partenariat: string;
+  statut: 'en_attente' | 'acceptee' | 'refusee' | 'en_cours';
+  date_creation: string;
+  date_modification?: string;
+  entreprise_nom?: string;
+  lycee_nom?: string;
+  metier_id?: string;
+  zone_geo?: string;
+  nb_places?: number;
+  date_debut_souhaitee?: string;
+  date_fin_souhaitee?: string;
+  priorite?: 'BASSE' | 'NORMALE' | 'HAUTE' | 'URGENTE';
+}> = [];
+
+// ================================
+// ROUTES D'AUTHENTIFICATION
+// ================================
+
+/**
+ * POST /api/auth/register
+ * Inscription d'un nouvel utilisateur
+ */
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, type, uai, siret } = req.body;
+
+    if (!email || !password || !name || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tous les champs sont obligatoires'
+      });
+    }
+
+    // Validation spécifique selon le type
+    if (type === 'lycee' && !uai) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le code UAI est obligatoire pour les lycées'
+      });
+    }
+
+    if (type === 'entreprise' && !siret) {
+      return res.status(400).json({
+        success: false,
+        error: 'Le SIRET est obligatoire pour les entreprises'
+      });
+    }
+
+    // Vérifier si l'utilisateur existe déjà
+    const existingUser = users.find(user => user.email === email);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Un utilisateur avec cet email existe déjà'
+      });
+    }
+
+    // Hasher le mot de passe
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Créer l'utilisateur
+    const newUser = {
+      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      email,
+      password: hashedPassword,
+      name,
+      type: type as 'entreprise' | 'lycee',
+      ...(type === 'lycee' && uai && { uai }),
+      ...(type === 'entreprise' && siret && { siret })
+    };
+
+    users.push(newUser);
+
+    // Créer le token JWT
+    const token = jwt.sign(
+      { 
+        id: newUser.id, 
+        email: newUser.email, 
+        type: newUser.type,
+        name: newUser.name,
+        ...(newUser.uai && { uai: newUser.uai }),
+        ...(newUser.siret && { siret: newUser.siret })
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        type: newUser.type,
+        ...(newUser.uai && { uai: newUser.uai }),
+        ...(newUser.siret && { siret: newUser.siret })
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'inscription:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Connexion d'un utilisateur
+ */
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password, type } = req.body;
+
+    if (!email || !password || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, mot de passe et type sont obligatoires'
+      });
+    }
+
+    // Trouver l'utilisateur
+    const user = users.find(u => u.email === email && u.type === type);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email ou mot de passe incorrect'
+      });
+    }
+
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email ou mot de passe incorrect'
+      });
+    }
+
+    // Créer le token JWT
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        type: user.type,
+        name: user.name,
+        ...(user.uai && { uai: user.uai }),
+        ...(user.siret && { siret: user.siret })
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        type: user.type,
+        ...(user.uai && { uai: user.uai }),
+        ...(user.siret && { siret: user.siret })
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la connexion:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur interne du serveur'
+    });
+  }
+});
+
+/**
+ * GET /api/auth/verify
+ * Vérification d'un token JWT
+ */
+router.get('/auth/verify', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token d\'authentification manquant'
+      });
+    }
+
+    const token = authHeader.substring(7);
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    res.json({
+      success: true,
+      user: {
+        id: decoded.id,
+        email: decoded.email,
+        name: decoded.name,
+        type: decoded.type
+      }
+    });
+
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      error: 'Token invalide'
+    });
+  }
+});
+
+// ================================
+// MIDDLEWARE D'AUTHENTIFICATION
+// ================================
+
+const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      error: 'Token d\'authentification manquant'
+    });
+  }
+
+  const token = authHeader.substring(7);
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: 'Token invalide'
+    });
+  }
+};
+
+// ================================
+// ROUTES POUR LES DEMANDES
+// ================================
+
+/**
+ * GET /api/db/demandes
+ * Récupérer toutes les demandes avec filtres optionnels
+ */
+router.get('/db/demandes', authenticateToken, (req: any, res) => {
+  try {
+    const { entreprise_id, lycee_uai, statut, type_partenariat } = req.query;
+    
+    let filteredDemandes = [...demandes];
+
+    // Filtrer selon l'utilisateur connecté
+    if (req.user.type === 'entreprise') {
+      filteredDemandes = filteredDemandes.filter(d => d.entreprise_id === req.user.id);
+    } else if (req.user.type === 'lycee' && req.user.uai) {
+      filteredDemandes = filteredDemandes.filter(d => d.lycee_uai === req.user.uai);
+    }
+
+    // Appliquer les filtres
+    if (entreprise_id) {
+      filteredDemandes = filteredDemandes.filter(d => d.entreprise_id === entreprise_id);
+    }
+    if (lycee_uai) {
+      filteredDemandes = filteredDemandes.filter(d => d.lycee_uai === lycee_uai);
+    }
+    if (statut) {
+      filteredDemandes = filteredDemandes.filter(d => d.statut === statut);
+    }
+    if (type_partenariat) {
+      filteredDemandes = filteredDemandes.filter(d => d.type_partenariat === type_partenariat);
+    }
+
+    // Enrichir avec les noms des entreprises et lycées
+    const demandesEnrichies = filteredDemandes.map(demande => {
+      const entreprise = users.find(u => u.id === demande.entreprise_id);
+      return {
+        ...demande,
+        entreprise_nom: entreprise?.name || 'Entreprise inconnue',
+        nb_lycees_assignes: demande.lycee_uai ? 1 : 0
+      };
+    });
+
+    res.json({
+      success: true,
+      data: demandesEnrichies,
+      count: demandesEnrichies.length
+    });
+
+  } catch (error) {
+    console.error('Erreur récupération demandes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des demandes'
+    });
+  }
+});
+
+/**
+ * POST /api/db/demandes
+ * Créer une nouvelle demande
+ */
+router.post('/db/demandes', authenticateToken, async (req: any, res) => {
+  try {
+    const {
+      lycee_uai,
+      titre,
+      description,
+      type_partenariat,
+      metier_id,
+      zone_geo,
+      nb_places,
+      date_debut_souhaitee,
+      date_fin_souhaitee,
+      priorite
+    } = req.body;
+
+    // Vérification des champs obligatoires
+    if (!titre || !description || !type_partenariat) {
+      return res.status(400).json({
+        success: false,
+        error: 'Titre, description et type de partenariat sont obligatoires'
+      });
+    }
+
+    // Vérifier que l'utilisateur est une entreprise
+    if (req.user.type !== 'entreprise') {
+      return res.status(403).json({
+        success: false,
+        error: 'Seules les entreprises peuvent créer des demandes'
+      });
+    }
+
+    // Si un lycée spécifique est ciblé, vérifier qu'il existe
+    let lycee_nom: string | undefined = undefined;
+    if (lycee_uai) {
+      try {
+        const lycees = await lyceeService.searchLycees({});
+        const lycee = lycees.find(l => l.numero_uai === lycee_uai);
+        if (lycee) {
+          lycee_nom = lycee.nom_etablissement;
+        }
+      } catch (error) {
+        console.warn('Erreur lors de la vérification du lycée:', error);
+      }
+    }
+
+    // Créer la demande
+    const nouvelleDemande = {
+      id: `demande-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      entreprise_id: req.user.id,
+      lycee_uai: lycee_uai || undefined,
+      titre,
+      description,
+      type_partenariat,
+      statut: 'en_attente' as const,
+      date_creation: new Date().toISOString(),
+      entreprise_nom: req.user.name,
+      lycee_nom,
+      metier_id,
+      zone_geo,
+      nb_places: nb_places ? parseInt(nb_places) : undefined,
+      date_debut_souhaitee,
+      date_fin_souhaitee,
+      priorite: priorite || 'NORMALE'
+    };
+
+    demandes.push(nouvelleDemande);
+
+    res.json({
+      success: true,
+      data: nouvelleDemande,
+      message: 'Demande créée avec succès'
+    });
+
+  } catch (error) {
+    console.error('Erreur création demande:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la création de la demande'
+    });
+  }
+});
+
+/**
+ * GET /api/db/demandes/:id
+ * Récupérer une demande spécifique
+ */
+router.get('/db/demandes/:id', authenticateToken, (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const demande = demandes.find(d => d.id === id);
+
+    if (!demande) {
+      return res.status(404).json({
+        success: false,
+        error: 'Demande non trouvée'
+      });
+    }
+
+    // Vérifier les permissions
+    const canView = (req.user.type === 'entreprise' && demande.entreprise_id === req.user.id) ||
+                   (req.user.type === 'lycee' && demande.lycee_uai === req.user.uai);
+
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        error: 'Accès non autorisé à cette demande'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: demande
+    });
+
+  } catch (error) {
+    console.error('Erreur récupération demande:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération de la demande'
+    });
+  }
+});
+
+/**
+ * PUT /api/db/demandes/:id/statut
+ * Mettre à jour le statut d'une demande (pour les lycées)
+ */
+router.put('/db/demandes/:id/statut', authenticateToken, (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+
+    if (!['en_attente', 'acceptee', 'refusee', 'en_cours'].includes(statut)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Statut invalide'
+      });
+    }
+
+    const demande = demandes.find(d => d.id === id);
+    if (!demande) {
+      return res.status(404).json({
+        success: false,
+        error: 'Demande non trouvée'
+      });
+    }
+
+    // Seuls les lycées peuvent modifier le statut
+    if (req.user.type !== 'lycee' || demande.lycee_uai !== req.user.uai) {
+      return res.status(403).json({
+        success: false,
+        error: 'Seul le lycée concerné peut modifier le statut'
+      });
+    }
+
+    demande.statut = statut;
+    demande.date_modification = new Date().toISOString();
+
+    res.json({
+      success: true,
+      data: demande,
+      message: 'Statut mis à jour avec succès'
+    });
+
+  } catch (error) {
+    console.error('Erreur mise à jour statut:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la mise à jour du statut'
+    });
+  }
+});
+
+// ================================
+// ROUTES POUR LES RÉFÉRENTIELS
+// ================================
+
+/**
+ * GET /api/db/regions
+ * Récupérer toutes les régions
+ */
+router.get('/db/regions', (req, res) => {
+  const regions = [
+    { id: '1', nom: 'Auvergne-Rhône-Alpes', code: 'ARA' },
+    { id: '2', nom: 'Bourgogne-Franche-Comté', code: 'BFC' },
+    { id: '3', nom: 'Bretagne', code: 'BRE' },
+    { id: '4', nom: 'Centre-Val de Loire', code: 'CVL' },
+    { id: '5', nom: 'Corse', code: 'COR' },
+    { id: '6', nom: 'Grand Est', code: 'GES' },
+    { id: '7', nom: 'Hauts-de-France', code: 'HDF' },
+    { id: '8', nom: 'Île-de-France', code: 'IDF' },
+    { id: '9', nom: 'Normandie', code: 'NOR' },
+    { id: '10', nom: 'Nouvelle-Aquitaine', code: 'NAQ' },
+    { id: '11', nom: 'Occitanie', code: 'OCC' },
+    { id: '12', nom: 'Pays de la Loire', code: 'PDL' },
+    { id: '13', nom: "Provence-Alpes-Côte d'Azur", code: 'PAC' }
+  ];
+
+  res.json({
+    success: true,
+    data: regions
+  });
+});
+
+/**
+ * GET /api/db/domaines
+ * Récupérer tous les domaines d'activité
+ */
+router.get('/db/domaines', (req, res) => {
+  const domaines = [
+    { id: '1', nom: 'Agriculture, agroalimentaire', code: 'AGR' },
+    { id: '2', nom: 'Arts, artisanat', code: 'ART' },
+    { id: '3', nom: 'Automobile', code: 'AUTO' },
+    { id: '4', nom: 'Bâtiment, travaux publics', code: 'BTP' },
+    { id: '5', nom: 'Commerce, vente', code: 'COM' },
+    { id: '6', nom: 'Électricité, électronique', code: 'ELEC' },
+    { id: '7', nom: 'Informatique, numérique', code: 'INFO' },
+    { id: '8', nom: 'Logistique, transport', code: 'LOG' },
+    { id: '9', nom: 'Mécanique, métallurgie', code: 'MEC' },
+    { id: '10', nom: 'Santé, social', code: 'SANTE' },
+    { id: '11', nom: 'Services aux personnes', code: 'SERV' },
+    { id: '12', nom: 'Tourisme, hôtellerie', code: 'TOUR' }
+  ];
+
+  res.json({
+    success: true,
+    data: domaines
+  });
+});
+
+/**
+ * GET /api/db/metiers
+ * Récupérer tous les métiers, optionnellement filtrés par domaine
+ */
+router.get('/db/metiers', (req, res) => {
+  const { domaine_id } = req.query;
+
+  const metiers = [
+    { id: '1', nom: 'Développeur web', domaine_id: '7' },
+    { id: '2', nom: 'Technicien informatique', domaine_id: '7' },
+    { id: '3', nom: 'Commercial', domaine_id: '5' },
+    { id: '4', nom: 'Vendeur', domaine_id: '5' },
+    { id: '5', nom: 'Électricien', domaine_id: '6' },
+    { id: '6', nom: 'Maçon', domaine_id: '4' },
+    { id: '7', nom: 'Mécanicien auto', domaine_id: '3' },
+    { id: '8', nom: 'Cuisinier', domaine_id: '12' },
+    { id: '9', nom: 'Serveur', domaine_id: '12' },
+    { id: '10', nom: 'Aide-soignant', domaine_id: '10' }
+  ];
+
+  let filteredMetiers = metiers;
+  if (domaine_id) {
+    filteredMetiers = metiers.filter(m => m.domaine_id === domaine_id);
+  }
+
+  res.json({
+    success: true,
+    data: filteredMetiers
+  });
+});
+
+/**
+ * GET /api/db/entreprises
+ * Récupérer toutes les entreprises avec filtres optionnels
+ */
+router.get('/db/entreprises', (req, res) => {
+  // Données d'exemple d'entreprises
+  const entreprises = [
+    {
+      id: '1',
+      nom: 'Tech Solutions',
+      siret: '12345678901234',
+      secteur_activite: 'Informatique',
+      adresse: '10 rue de la Tech',
+      ville: 'Lyon',
+      description: 'Société de développement logiciel'
+    },
+    {
+      id: '2',
+      nom: 'Commerce Plus',
+      siret: '23456789012345',
+      secteur_activite: 'Commerce',
+      adresse: '5 avenue du Commerce',
+      ville: 'Paris',
+      description: 'Chaîne de magasins'
+    }
+  ];
+
+  const { nom, siret, secteur, ville } = req.query;
+  let filteredEntreprises = [...entreprises];
+
+  if (nom) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.nom.toLowerCase().includes((nom as string).toLowerCase())
+    );
+  }
+  if (siret) {
+    filteredEntreprises = filteredEntreprises.filter(e => e.siret === siret);
+  }
+  if (secteur) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.secteur_activite?.toLowerCase().includes((secteur as string).toLowerCase())
+    );
+  }
+  if (ville) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.ville?.toLowerCase().includes((ville as string).toLowerCase())
+    );
+  }
+
+  res.json({
+    success: true,
+    data: filteredEntreprises
+  });
+});
+
+/**
+ * GET /api/db/entreprises/search
+ * Rechercher des entreprises selon des critères
+ */
+router.get('/db/entreprises/search', (req, res) => {
+  const { nom, siret, secteur, ville } = req.query;
+  
+  // Utiliser la même logique que la route GET /api/db/entreprises
+  const entreprises = [
+    {
+      id: '1',
+      nom: 'Tech Solutions',
+      siret: '12345678901234',
+      secteur_activite: 'Informatique',
+      adresse: '10 rue de la Tech',
+      ville: 'Lyon',
+      description: 'Société de développement logiciel'
+    },
+    {
+      id: '2',
+      nom: 'Commerce Plus',
+      siret: '23456789012345',
+      secteur_activite: 'Commerce',
+      adresse: '5 avenue du Commerce',
+      ville: 'Paris',
+      description: 'Chaîne de magasins'
+    }
+  ];
+
+  let filteredEntreprises = [...entreprises];
+
+  if (nom) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.nom.toLowerCase().includes((nom as string).toLowerCase())
+    );
+  }
+  if (siret) {
+    filteredEntreprises = filteredEntreprises.filter(e => e.siret === siret);
+  }
+  if (secteur) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.secteur_activite?.toLowerCase().includes((secteur as string).toLowerCase())
+    );
+  }
+  if (ville) {
+    filteredEntreprises = filteredEntreprises.filter(e => 
+      e.ville?.toLowerCase().includes((ville as string).toLowerCase())
+    );
+  }
+
+  res.json({
+    success: true,
+    data: filteredEntreprises
+  });
+});
+
+/**
+ * GET /api/db/stats/demandes
+ * Statistiques sur les demandes
+ */
+router.get('/db/stats/demandes', authenticateToken, (req: any, res) => {
+  try {
+    let filteredDemandes = [...demandes];
+
+    // Filtrer selon l'utilisateur connecté
+    if (req.user.type === 'entreprise') {
+      filteredDemandes = filteredDemandes.filter(d => d.entreprise_id === req.user.id);
+    } else if (req.user.type === 'lycee' && req.user.uai) {
+      filteredDemandes = filteredDemandes.filter(d => d.lycee_uai === req.user.uai);
+    }
+
+    const stats = {
+      total: filteredDemandes.length,
+      en_attente: filteredDemandes.filter(d => d.statut === 'en_attente').length,
+      acceptees: filteredDemandes.filter(d => d.statut === 'acceptee').length,
+      refusees: filteredDemandes.filter(d => d.statut === 'refusee').length,
+      en_cours: filteredDemandes.filter(d => d.statut === 'en_cours').length,
+      par_type: {
+        stage: filteredDemandes.filter(d => d.type_partenariat === 'stage').length,
+        alternance: filteredDemandes.filter(d => d.type_partenariat === 'alternance').length,
+        visite: filteredDemandes.filter(d => d.type_partenariat === 'visite_entreprise').length,
+        projet: filteredDemandes.filter(d => d.type_partenariat === 'projet_collaboratif').length
+      }
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Erreur récupération stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des statistiques'
+    });
+  }
+});
+
+// ================================
+// ROUTES PROTÉGÉES
+// ================================
+
+/**
+ * GET /api/auth/profile
+ * Obtenir le profil de l'utilisateur connecté
+ */
+router.get('/auth/profile', authenticateToken, (req: any, res) => {
+  res.json({
+    success: true,
+    user: req.user
+  });
+});
 
 // Route principale pour le frontend
 router.post('/matching', async (req, res) => {

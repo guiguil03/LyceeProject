@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const profileType = searchParams.get('type') as 'entreprise' | 'lycee' | null;
+  const { login, register, isAuthenticated, isLoading } = useAuth();
   
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,21 +28,65 @@ export default function AuthPage() {
     }
   });
 
+  // Redirection si déjà connecté
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     
-    if (isLogin) {
-      // TODO: Implémenter la logique de connexion
-      console.log('Login:', formData.email, formData.password, profileType);
-      router.push('/dashboard');
-    } else {
-      // TODO: Implémenter la logique d'inscription
-      if (formData.password !== formData.confirmPassword) {
-        alert('Les mots de passe ne correspondent pas');
-        return;
+    if (!profileType) {
+      setError('Type de profil non spécifié');
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      if (isLogin) {
+        const result = await login(formData.email, formData.password, profileType);
+        if (result.success) {
+          // Redirection selon le type d'utilisateur
+          if (profileType === 'lycee') {
+            router.push('/lycee');
+          } else {
+            router.push('/');
+          }
+        } else {
+          setError(result.error || 'Erreur de connexion');
+        }
+      } else {
+        if (formData.password !== formData.confirmPassword) {
+          setError('Les mots de passe ne correspondent pas');
+          setLoading(false);
+          return;
+        }
+        
+        const name = formData.profil.nom || formData.nom;
+        const additionalData = profileType === 'lycee' 
+          ? { uai: formData.profil.uai }
+          : { siret: formData.profil.siret };
+        const result = await register(formData.email, formData.password, name, profileType, additionalData);
+        if (result.success) {
+          // Redirection selon le type d'utilisateur après inscription
+          if (profileType === 'lycee') {
+            router.push('/lycee');
+          } else {
+            router.push('/');
+          }
+        } else {
+          setError(result.error || 'Erreur lors de l\'inscription');
+        }
       }
-      console.log('Register:', formData, profileType);
-      router.push('/dashboard');
+    } catch (err) {
+      setError('Une erreur est survenue');
+      console.error('Erreur auth:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,7 +126,7 @@ export default function AuthPage() {
                 onClick={() => router.push('/')}
                 className="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-arrow-left-line"
               >
-                Retour à l'accueil
+                Retour à l accueil
               </button>
             </div>
             
@@ -100,12 +148,28 @@ export default function AuthPage() {
             </p>
           </div>
 
+          {/* Message d'erreur */}
+          {error && (
+            <div className="fr-alert fr-alert--error fr-mb-4w">
+              <h3 className="fr-alert__title">Erreur</h3>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {/* Indicateur de chargement global */}
+          {(isLoading || loading) && (
+            <div className="fr-alert fr-alert--info fr-mb-4w">
+              <h3 className="fr-alert__title">Chargement...</h3>
+              <p>Veuillez patienter</p>
+            </div>
+          )}
+
           {/* Formulaire */}
           <form onSubmit={handleSubmit}>
             <div className="fr-input-group">
               <label className="fr-label" htmlFor="email">
                 Adresse e-mail
-                <span className="fr-hint-text">L'adresse e-mail de votre {profileType === 'entreprise' ? 'entreprise' : 'établissement'}</span>
+                <span className="fr-hint-text">L&apos;adresse e-mail de votre {profileType === 'entreprise' ? 'entreprise' : 'établissement'}</span>
               </label>
               <input
                 className="fr-input"
@@ -199,7 +263,7 @@ export default function AuthPage() {
 
                     <div className="fr-select-group">
                       <label className="fr-label" htmlFor="profil.secteur">
-                        Secteur d'activité
+                        Secteur d&apos;activité
                       </label>
                       <select
                         className="fr-select"

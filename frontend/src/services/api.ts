@@ -1,5 +1,28 @@
 // Service API pour les appels vers le backend
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// Helper pour obtenir le token d'authentification
+const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken');
+  }
+  return null;
+};
+
+// Helper pour créer les headers avec authentification
+const getHeaders = (additionalHeaders: Record<string, string> = {}): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...additionalHeaders
+  };
+  
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
 
 export interface LyceeData {
   nom: string;
@@ -63,14 +86,98 @@ export interface SearchEntrepriseRequest {
 }
 
 export const api = {
-  // Recherche de lycées (API externe)
+  // === AUTHENTIFICATION ===
+  
+  async login(email: string, password: string, type: 'entreprise' | 'lycee') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ email, password, type }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      throw error;
+    }
+  },
+
+  async register(email: string, password: string, name: string, type: 'entreprise' | 'lycee') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ email, password, name, type }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      throw error;
+    }
+  },
+
+  async verifyToken() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+        method: 'GET',
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du token:', error);
+      throw error;
+    }
+  },
+
+  // === RECHERCHE DE LYCÉES ===
+  
+  // Recherche de lycées professionnels réels
+  async searchLyceesReels(criteria?: { commune?: string; departement?: string; region?: string; formation?: string }) {
+    try {
+      const params = new URLSearchParams();
+      if (criteria?.commune) params.append('commune', criteria.commune);
+      if (criteria?.departement) params.append('departement', criteria.departement);
+      if (criteria?.region) params.append('region', criteria.region);
+      if (criteria?.formation) params.append('formation', criteria.formation);
+
+      const response = await fetch(`${API_BASE_URL}/api/lycees/search?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Erreur lors de la recherche de lycées:', error);
+      throw error;
+    }
+  },
+
+  // Recherche de lycées (API externe - ancienne version)
   async searchLycees(criteria: SearchCriteria): Promise<LyceeData[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/lycees/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         body: JSON.stringify(criteria),
       });
 
@@ -79,9 +186,9 @@ export const api = {
       }
 
       const data = await response.json();
-      return data.lycees || [];
+      return data.success ? data.data : [];
     } catch (error) {
-      console.error('Erreur recherche lycées:', error);
+      console.error('Erreur lors de la recherche de lycées:', error);
       throw error;
     }
   },
@@ -101,29 +208,27 @@ export const api = {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Erreur lors du matching:', error);
       throw error;
     }
   },
 
-  // Obtenir les détails d'un lycée par ID (API externe)
+  // Obtenir les détails d'un lycée (API externe)
   async getLyceeDetails(id: string): Promise<LyceeData | null> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/lycees/${id}`);
 
       if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.lycee || null;
+      return data.success ? data.data : null;
     } catch (error) {
-      console.error('Erreur récupération détails lycée:', error);
+      console.error('Erreur lors de la récupération des détails:', error);
       throw error;
     }
   },
@@ -177,10 +282,7 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/api/db/demandes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': 'temp-user-id', // À remplacer par un vrai système d'auth
-        },
+        headers: getHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -206,7 +308,9 @@ export const api = {
         });
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/db/demandes?${params.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/db/demandes?${params.toString()}`, {
+        headers: getHeaders(),
+      });
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);

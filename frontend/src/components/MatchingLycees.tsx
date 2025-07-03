@@ -19,11 +19,38 @@ interface MatchingCriteria {
   };
 }
 
+interface LyceeResult {
+  lycee: {
+    nom_etablissement: string;
+    libelle_commune: string;
+    libelle_departement: string;
+    statut_public_prive: string;
+    formations?: string[];
+    telephone?: string;
+    mail?: string;
+    web?: string;
+  };
+  distance?: number;
+}
+
+interface EntrepriseInfo {
+  denominationSociale: string;
+  siret: string;
+  secteurActivite: string;
+  adresse: {
+    commune: string;
+    departement: string;
+    codePostal: string;
+  };
+}
+
 const MatchingLycees: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<any>(null);
-  const [entrepriseInfo, setEntrepriseInfo] = useState<any>(null);
+  const [results, setResults] = useState<LyceeResult[] | null>(null);
+  const [entrepriseInfo, setEntrepriseInfo] = useState<EntrepriseInfo | null>(null);
+  const [mapUrl, setMapUrl] = useState<string>("");
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   const [criteria, setCriteria] = useState<MatchingCriteria>({
     entreprise: {
@@ -42,6 +69,58 @@ const MatchingLycees: React.FC = () => {
     },
   });
 
+  // Fonction pour construire l'URL de la carte avec filtres intelligents
+  const buildSmartMapUrl = () => {
+    const baseUrl = "https://data.education.gouv.fr/explore/embed/dataset/fr-en-annuaire_bde_lycees_pro/carte/";
+    const params = new URLSearchParams({
+      'disjunctive.code_postal_uai': '',
+      'disjunctive.localite_acheminement_uai': '',
+      'disjunctive.libelle_commune': '',
+      'disjunctive.libelle_departement': '',
+      'disjunctive.libelle_region': '',
+      'disjunctive.libelle_academie': '',
+      'sort': 'numero_uai'
+    });
+
+    // Filtrage géographique basé sur l'entreprise ou la saisie manuelle
+    if (entrepriseInfo?.adresse) {
+      if (entrepriseInfo.adresse.departement) {
+        params.append('refine.libelle_departement', entrepriseInfo.adresse.departement);
+      }
+    } else if (criteria.entreprise?.localisation?.commune) {
+      params.append('refine.libelle_commune', criteria.entreprise.localisation.commune);
+    } else if (criteria.entreprise?.localisation?.departement) {
+      params.append('refine.libelle_departement', criteria.entreprise.localisation.departement);
+    }
+
+    // Filtrage par type d'établissement
+    if (criteria.preferences?.typeEtablissement && criteria.preferences.typeEtablissement !== "tous") {
+      if (criteria.preferences.typeEtablissement === "public") {
+        params.append('refine.secteur', 'Public');
+      } else if (criteria.preferences.typeEtablissement === "prive") {
+        params.append('refine.secteur', 'Privé');
+      }
+    }
+
+    // Recherche textuelle par secteur si spécifié
+    if (criteria.entreprise?.secteurActivite) {
+      const secteurQueries: { [key: string]: string } = {
+        'informatique': 'informatique OR numérique OR SIO OR SNIR',
+        'commerce': 'commerce OR vente OR marketing OR gestion',
+        'industrie': 'industriel OR mécanique OR électrique OR maintenance',
+        'batiment': 'bâtiment OR construction OR génie civil',
+        'restauration': 'restauration OR hôtellerie OR cuisine OR CSHCR',
+        'transport': 'transport OR logistique OR automobile',
+        'sante': 'santé OR social OR ASSP'
+      };
+      
+      const query = secteurQueries[criteria.entreprise.secteurActivite] || criteria.entreprise.secteurActivite;
+      params.append('q', query);
+    }
+
+    return `${baseUrl}?${params.toString()}`;
+  };
+
   const handleSearch = async () => {
     if (!criteria.entreprise?.secteurActivite && !criteria.entreprise?.siret) {
       setError(
@@ -54,6 +133,7 @@ const MatchingLycees: React.FC = () => {
     setError(null);
     setResults(null);
     setEntrepriseInfo(null);
+    setSearchPerformed(true);
 
     try {
       console.log("Recherche avec critères:", criteria);
@@ -79,6 +159,14 @@ const MatchingLycees: React.FC = () => {
 
         setResults(data.data.matches || []);
         setEntrepriseInfo(data.data.entreprise || null);
+        
+        // Construire l'URL de la carte filtrée après avoir reçu les données
+        setTimeout(() => {
+          const filteredUrl = buildSmartMapUrl();
+          setMapUrl(filteredUrl);
+          console.log("🗺️ URL carte générée:", filteredUrl);
+        }, 100);
+        
         setError(null);
       } else {
         throw new Error(data.message || "Erreur lors de la recherche");
@@ -132,94 +220,94 @@ const MatchingLycees: React.FC = () => {
             <div className="fr-grid-row fr-grid-row--gutters">
               {/* Section Entreprise */}
               <div className="fr-col-12 fr-col-lg-6">
-                <fieldset className="fr-fieldset">
-                  <legend className="fr-fieldset__legend fr-text--regular">
-                    <span
-                      className="fr-icon-building-line fr-mr-1w"
-                      aria-hidden="true"
-                    ></span>
-                    Votre entreprise
-                  </legend>
+                <div className="fr-card fr-card--grey fr-card--no-arrow fr-mb-4w">
+                  <div className="fr-card__body">
+                    <div className="fr-card__content">
+                      <h3 className="fr-card__title fr-h5">
+                        <span className="fr-icon-building-line fr-mr-2w" aria-hidden="true"></span>
+                        Votre entreprise
+                      </h3>
 
-                  {/* SIRET Input */}
-                  <div className="fr-input-group fr-mb-4w">
-                    <label className="fr-label" htmlFor="siret-input">
-                      SIRET (optionnel)
-                      <span className="fr-hint-text">
-                        Saisissez le SIRET de votre entreprise pour récupérer
-                        automatiquement ses informations
-                      </span>
-                    </label>
-                    <input
-                      className="fr-input"
-                      type="text"
-                      id="siret-input"
-                      name="siret"
-                      value={criteria.entreprise?.siret || ""}
-                      onChange={(e) =>
-                        setCriteria((prev) => ({
-                          ...prev,
-                          entreprise: {
-                            ...prev.entreprise,
-                            siret: e.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="12345678901234"
-                    />
-                  </div>
+                      {/* SIRET Input */}
+                      <div className="fr-input-group fr-mb-3w">
+                        <label className="fr-label" htmlFor="siret-input">
+                          <strong>SIRET (optionnel)</strong>
+                          <span className="fr-hint-text">
+                            Saisissez le SIRET de votre entreprise pour récupérer
+                            automatiquement ses informations
+                          </span>
+                        </label>
+                        <input
+                          className="fr-input"
+                          type="text"
+                          id="siret-input"
+                          name="siret"
+                          value={criteria.entreprise?.siret || ""}
+                          onChange={(e) =>
+                            setCriteria((prev) => ({
+                              ...prev,
+                              entreprise: {
+                                ...prev.entreprise,
+                                siret: e.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="12345678901234"
+                        />
+                      </div>
 
-                  {/* Secteur d'activité */}
-                  <div className="fr-select-group fr-mb-4w">
-                    <label className="fr-label" htmlFor="secteur-select">
-                      Secteur d&apos;activité
-                      <span className="fr-hint-text">* Champ obligatoire</span>
-                    </label>
-                    <select
-                      className="fr-select"
-                      id="secteur-select"
-                      name="secteur"
-                      value={criteria.entreprise?.secteurActivite || ""}
-                      onChange={(e) =>
-                        setCriteria((prev) => ({
-                          ...prev,
-                          entreprise: {
-                            ...prev.entreprise,
-                            secteurActivite: e.target.value,
-                          },
-                        }))
-                      }
-                      required
-                    >
-                      <option value="">Sélectionnez un secteur</option>
-                      <option value="informatique">
-                        Informatique et numérique
-                      </option>
-                      <option value="commerce">Commerce et vente</option>
-                      <option value="industrie">Industrie et production</option>
-                      <option value="batiment">
-                        Bâtiment et travaux publics
-                      </option>
-                      <option value="restauration">
-                        Restauration et hôtellerie
-                      </option>
-                      <option value="transport">Transport et logistique</option>
-                      <option value="sante">Santé et social</option>
-                    </select>
+                      {/* Secteur d'activité */}
+                      <div className="fr-select-group">
+                        <label className="fr-label" htmlFor="secteur-select">
+                          <strong>Secteur d&apos;activité</strong>
+                          <span className="fr-hint-text">* Champ obligatoire</span>
+                        </label>
+                        <select
+                          className="fr-select"
+                          id="secteur-select"
+                          name="secteur"
+                          value={criteria.entreprise?.secteurActivite || ""}
+                          onChange={(e) =>
+                            setCriteria((prev) => ({
+                              ...prev,
+                              entreprise: {
+                                ...prev.entreprise,
+                                secteurActivite: e.target.value,
+                              },
+                            }))
+                          }
+                          required
+                        >
+                          <option value="">Sélectionnez un secteur</option>
+                          <option value="informatique">
+                            Informatique et numérique
+                          </option>
+                          <option value="commerce">Commerce et vente</option>
+                          <option value="industrie">Industrie et production</option>
+                          <option value="batiment">
+                            Bâtiment et travaux publics
+                          </option>
+                          <option value="restauration">
+                            Restauration et hôtellerie
+                          </option>
+                          <option value="transport">Transport et logistique</option>
+                          <option value="sante">Santé et social</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                </fieldset>
+                </div>
               </div>
 
               {/* Section Localisation et Préférences */}
               <div className="fr-col-12 fr-col-lg-6">
-                <fieldset className="fr-fieldset">
-                  <legend className="fr-fieldset__legend fr-text--regular">
-                    <span
-                      className="fr-icon-map-pin-2-line fr-mr-1w"
-                      aria-hidden="true"
-                    ></span>
-                    Localisation et Préférences
-                  </legend>
+                <div className="fr-card fr-card--grey fr-card--no-arrow fr-mb-4w">
+                  <div className="fr-card__body">
+                    <div className="fr-card__content">
+                      <h3 className="fr-card__title fr-h5">
+                        <span className="fr-icon-map-pin-2-line fr-mr-2w" aria-hidden="true"></span>
+                        Localisation et Préférences
+                      </h3>
 
                   {/* Commune */}
                   <div className="fr-input-group fr-mb-4w">
@@ -393,19 +481,58 @@ const MatchingLycees: React.FC = () => {
                       </div>
                     </fieldset>
                   </div>
-                </fieldset>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Bouton de recherche */}
             <div className="fr-mt-6w fr-mb-4w">
-              <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-search-line"
-              >
-                {loading ? "Recherche en cours..." : "Rechercher des lycées"}
-              </button>
+              <div className="fr-grid-row fr-grid-row--center">
+                <div className="fr-col-auto">
+                  <button
+                    onClick={handleSearch}
+                    disabled={loading || (!criteria.entreprise?.secteurActivite && !criteria.entreprise?.siret)}
+                    className={`fr-btn fr-btn--lg ${
+                      loading 
+                        ? "fr-btn--icon-left fr-icon-refresh-line fr-icon--rotating" 
+                        : "fr-btn--icon-left fr-icon-search-line"
+                    }`}
+                  >
+                    {loading ? "Recherche en cours..." : "🎯 Rechercher des lycées"}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Aide contextuelle */}
+              {!criteria.entreprise?.secteurActivite && !criteria.entreprise?.siret && (
+                <div className="fr-mt-3w">
+                  <div className="fr-callout fr-callout--brown-caramel">
+                    <p className="fr-callout__text">
+                      <span className="fr-icon-information-line fr-mr-1w" aria-hidden="true"></span>
+                      Veuillez renseigner au minimum un <strong>secteur d&apos;activité</strong> ou un <strong>SIRET</strong> pour lancer la recherche.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {criteria.entreprise?.secteurActivite && !loading && (
+                <div className="fr-mt-3w">
+                  <div className="fr-callout fr-callout--green-emeraude">
+                    <p className="fr-callout__text">
+                      <span className="fr-icon-check-line fr-mr-1w" aria-hidden="true"></span>
+                      Prêt à rechercher les lycées spécialisés en <strong>{criteria.entreprise.secteurActivite}</strong>
+                      {criteria.entreprise?.localisation?.commune && (
+                        <> autour de <strong>{criteria.entreprise.localisation.commune}</strong></>
+                      )}
+                      {entrepriseInfo?.adresse?.commune && (
+                        <> autour de <strong>{entrepriseInfo.adresse.commune}</strong></>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Affichage des erreurs */}
@@ -485,135 +612,134 @@ const MatchingLycees: React.FC = () => {
         </div>
       )}
 
-      {/* Affichage des résultats */}
+      {/* Affichage des résultats sur carte */}
       {results && results.length > 0 && (
         <div className="fr-container fr-mt-6w">
           <div className="fr-alert fr-alert--success fr-mb-4w">
             <h3 className="fr-alert__title">Résultats de recherche</h3>
             <p>
-              {results.length} lycée(s) trouvé(s) correspondant à vos critères
+              {results.length} lycée(s) trouvé(s) correspondant à vos critères 
+              {mapUrl ? " - Carte filtrée selon vos critères" : " - Affichage sur carte interactive"}
+              {searchPerformed && (
+                <span className="fr-text--sm fr-ml-2w">
+                  <span className="fr-icon-check-line fr-mr-1w" aria-hidden="true"></span>
+                  Recherche effectuée
+                </span>
+              )}
             </p>
           </div>
 
-          <div className="fr-grid-row fr-grid-row--gutters">
-            {results.map((match: any, index: number) => {
-              const lycee = match.lycee;
-              return (
-                <div key={index} className="fr-col-12 fr-col-md-6 fr-col-lg-4">
-                  <div className="fr-card fr-card--no-arrow">
-                    <div className="fr-card__body">
-                      <div className="fr-card__content">
-                        <h4 className="fr-card__title">
-                          {lycee.nom_etablissement}
-                        </h4>
-
-                        <ul className="fr-list fr-text--sm">
-                          <li>
-                            <span
-                              className="fr-icon-map-pin-2-line fr-mr-1w"
-                              aria-hidden="true"
-                            ></span>
-                            {lycee.libelle_commune} ({lycee.libelle_departement}
-                            )
-                          </li>
-
-                          <li>
-                            <span
-                              className="fr-icon-government-line fr-mr-1w"
-                              aria-hidden="true"
-                            ></span>
-                            <span className="fr-text--capitalize">
-                              {lycee.statut_public_prive}
-                            </span>
-                          </li>
-
-                          {match.distance && (
-                            <li>
-                              <span
-                                className="fr-icon-road-map-line fr-mr-1w"
-                                aria-hidden="true"
-                              ></span>
-                              {Math.round(match.distance)} km
-                            </li>
-                          )}
+          {/* Carte interactive des lycées professionnels */}
+          <div className="fr-card fr-card--no-arrow">
+            <div className="fr-card__body">
+              <div className="fr-card__content">
+                <h4 className="fr-card__title">
+                  <span className="fr-icon-map-pin-2-line fr-mr-2w" aria-hidden="true"></span>
+                  Localisation des lycées professionnels
+                </h4>
+                <p className="fr-card__desc fr-mb-4w">
+                  Carte interactive des lycées professionnels français - Données officielles du Ministère de l&apos;Éducation nationale
+                </p>
+                
+                <div style={{ position: 'relative', height: '600px', width: '100%', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <iframe
+                    src={mapUrl || "https://data.education.gouv.fr/explore/embed/dataset/fr-en-annuaire_bde_lycees_pro/carte/?disjunctive.code_postal_uai&disjunctive.localite_acheminement_uai&disjunctive.libelle_commune&disjunctive.libelle_departement&disjunctive.libelle_region&disjunctive.libelle_academie&sort=numero_uai"}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 'none' }}
+                    title={mapUrl ? "Carte des lycées professionnels filtrés" : "Carte des lycées professionnels français"}
+                    allowFullScreen
+                  />
+                </div>
+                
+                <div className="fr-mt-4w">
+                  <div className="fr-grid-row fr-grid-row--gutters">
+                    <div className="fr-col-12 fr-col-md-6">
+                      <div className="fr-callout fr-callout--blue-france">
+                        <h5 className="fr-callout__title">
+                          <span className="fr-icon-information-line fr-mr-1w" aria-hidden="true"></span>
+                          Fonctionnalités de la carte
+                        </h5>
+                        <ul className="fr-list">
+                          <li>Zoom et navigation libre</li>
+                          <li>Filtres par région, département, commune</li>
+                          <li>Informations détaillées par établissement</li>
+                          <li>Recherche par nom d&apos;établissement</li>
                         </ul>
-
-                        {/* Diplômes disponibles */}
-                        {lycee.formations && lycee.formations.length > 0 && (
-                          <div className="fr-mt-2w">
-                            <p className="fr-text--xs fr-text--bold fr-mb-1w">
-                              <span
-                                className="fr-icon-award-line fr-mr-1w"
-                                aria-hidden="true"
-                              ></span>
-                              Diplômes préparés ({lycee.formations.length})
-                            </p>
-                            <div className="fr-tags-group">
-                              {lycee.formations
-                                .slice(0, 2)
-                                .map((formation: string, idx: number) => (
-                                  <span key={idx} className="fr-tag fr-tag--sm">
-                                    {formation.length > 25
-                                      ? formation.substring(0, 25) + "..."
-                                      : formation}
-                                  </span>
-                                ))}
-                              {lycee.formations.length > 2 && (
-                                <span className="fr-tag fr-tag--sm">
-                                  +{lycee.formations.length - 2} autres
-                                </span>
+                      </div>
+                    </div>
+                    <div className="fr-col-12 fr-col-md-6">
+                      <div className="fr-callout fr-callout--green-tilleul-verveine">
+                        <h5 className="fr-callout__title">
+                          <span className="fr-icon-award-line fr-mr-1w" aria-hidden="true"></span>
+                          Données officielles
+                        </h5>
+                        <p className="fr-text--sm">
+                          Cette carte utilise les données officielles de l&apos;annuaire 
+                          des lycées professionnels du Ministère de l&apos;Éducation nationale, 
+                          mise à jour régulièrement.
+                        </p>
+                        
+                        {mapUrl && (
+                          <div className="fr-alert fr-alert--info fr-alert--sm fr-mt-2w">
+                            <p className="fr-alert__title">Filtres appliqués</p>
+                            <ul className="fr-list fr-text--xs">
+                              {entrepriseInfo?.adresse?.departement && (
+                                <li>
+                                  <span className="fr-icon-map-pin-2-line fr-mr-1w" aria-hidden="true"></span>
+                                  Département : {entrepriseInfo.adresse.departement}
+                                </li>
                               )}
-                            </div>
+                              {criteria.entreprise?.localisation?.commune && (
+                                <li>
+                                  <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
+                                  Commune : {criteria.entreprise.localisation.commune}
+                                </li>
+                              )}
+                              {criteria.entreprise?.secteurActivite && (
+                                <li>
+                                  <span className="fr-icon-briefcase-line fr-mr-1w" aria-hidden="true"></span>
+                                  Secteur : {criteria.entreprise.secteurActivite}
+                                </li>
+                              )}
+                              {criteria.preferences?.typeEtablissement !== "tous" && (
+                                <li>
+                                  <span className="fr-icon-government-line fr-mr-1w" aria-hidden="true"></span>
+                                  Type : {criteria.preferences?.typeEtablissement}
+                                </li>
+                              )}
+                            </ul>
                           </div>
                         )}
-
-                        {/* Contact */}
-                        {(lycee.telephone || lycee.mail || lycee.web) && (
-                          <div className="fr-mt-3w fr-pt-2w fr-border-top">
-                            {lycee.telephone && (
-                              <p className="fr-text--xs fr-mb-1v">
-                                <span
-                                  className="fr-icon-phone-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                {lycee.telephone}
-                              </p>
-                            )}
-                            {lycee.mail && (
-                              <p className="fr-text--xs fr-mb-1v">
-                                <span
-                                  className="fr-icon-mail-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                <span className="fr-text--truncate">
-                                  {lycee.mail}
-                                </span>
-                              </p>
-                            )}
-                            {lycee.web && (
-                              <p className="fr-text--xs">
-                                <span
-                                  className="fr-icon-external-link-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                <a
-                                  href={lycee.web}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="fr-link fr-link--icon-right fr-icon-external-link-line"
-                                >
-                                  Site web
-                                </a>
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        
+                        <div className="fr-btns-group fr-btns-group--sm fr-mt-3w">
+                          <a 
+                            href="https://data.education.gouv.fr/explore/dataset/fr-en-annuaire_bde_lycees_pro/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-right fr-icon-external-link-line"
+                          >
+                            Source des données
+                          </a>
+                          {mapUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMapUrl("");
+                                console.log("🗺️ Filtres supprimés - vue globale");
+                              }}
+                              className="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line"
+                            >
+                              Supprimer les filtres
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -625,9 +751,34 @@ const MatchingLycees: React.FC = () => {
             <h3 className="fr-alert__title">Aucun lycée trouvé</h3>
             <p>
               Aucun établissement ne correspond à vos critères de recherche.
-              Essayez de modifier vos critères ou d&apos;élargir la zone
-              géographique.
+              Consultez la carte ci-dessous pour explorer tous les lycées professionnels disponibles.
             </p>
+          </div>
+          
+          {/* Carte même sans résultats spécifiques */}
+          <div className="fr-card fr-card--no-arrow fr-mt-4w">
+            <div className="fr-card__body">
+              <div className="fr-card__content">
+                <h4 className="fr-card__title">
+                  <span className="fr-icon-map-pin-2-line fr-mr-2w" aria-hidden="true"></span>
+                  Explorer tous les lycées professionnels
+                </h4>
+                <p className="fr-card__desc fr-mb-4w">
+                  Utilisez la carte interactive pour découvrir l&apos;ensemble des lycées professionnels français
+                </p>
+                
+                <div style={{ position: 'relative', height: '600px', width: '100%', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <iframe
+                    src="https://data.education.gouv.fr/explore/embed/dataset/fr-en-annuaire_bde_lycees_pro/carte/?disjunctive.code_postal_uai&disjunctive.localite_acheminement_uai&disjunctive.libelle_commune&disjunctive.libelle_departement&disjunctive.libelle_region&disjunctive.libelle_academie&sort=numero_uai"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 'none' }}
+                    title="Carte des lycées professionnels français"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
