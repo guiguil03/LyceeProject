@@ -2,12 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<'entreprise' | 'lycee' | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // TODO: Gérer avec un contexte auth
 
   const handleProfileSelection = (profile: 'entreprise' | 'lycee') => {
     setSelectedProfile(profile);
@@ -24,40 +23,6 @@ export default function HomePage() {
 
   const handleDashboard = () => {
     router.push('/dashboard');
-  };
-
-  const getConnectionStatus = () => {
-    if (!isAuthenticated || !user) return null;
-    
-    const roleLabels = {
-      'LYCEE_ADMIN': 'Lycée',
-      'ENTREPRISE_ADMIN': 'Entreprise',
-      'SUPER_ADMIN': 'Super Administrateur'
-    };
-    
-    return (
-      <div className="fr-alert fr-alert--info fr-mb-4w">
-        <p>
-          <span className="fr-icon-user-line fr-mr-1w" aria-hidden="true"></span>
-          Vous êtes connecté en tant que <strong>{roleLabels[user.role] || user.role}</strong>
-          {user.full_name && ` - ${user.full_name}`}
-        </p>
-        <div className="fr-btns-group fr-btns-group--sm fr-mt-2w">
-          <button 
-            className="fr-btn fr-btn--sm"
-            onClick={() => router.push('/dashboard')}
-          >
-            Accéder au tableau de bord
-          </button>
-          <button 
-            className="fr-btn fr-btn--sm fr-btn--secondary"
-            onClick={logout}
-          >
-            Se déconnecter
-          </button>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -83,9 +48,6 @@ export default function HomePage() {
                 Une plateforme dédiée aux partenariats entre le monde professionnel et l'enseignement technique. 
                 Créez des collaborations durables pour l'insertion professionnelle des jeunes.
               </p>
-
-              {/* Affichage du statut de connexion */}
-              {getConnectionStatus()}
 
               {!isAuthenticated ? (
                 // Section choix de profil pour non-connectés

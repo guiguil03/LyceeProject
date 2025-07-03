@@ -151,7 +151,6 @@ class DemandeService {
    */
   async searchDemandes(filters: {
     entreprise_id?: string;
-    lycee_id?: string;
     statut?: string;
     priorite?: string;
     secteur_activite?: string;
@@ -171,16 +170,6 @@ class DemandeService {
     if (filters.entreprise_id) {
       whereConditions.push(`d.entreprise_id = $${paramIndex++}`);
       params.push(filters.entreprise_id);
-    }
-
-    if (filters.lycee_id) {
-      // Pour les lycées, on filtre les demandes qui leur sont assignées
-      whereConditions.push(`EXISTS (
-        SELECT 1 FROM "DemandeLycee" dl 
-        WHERE dl.demande_id = d.id AND dl.lycee_id = $${paramIndex}
-      )`);
-      params.push(filters.lycee_id);
-      paramIndex++;
     }
 
     if (filters.statut) {
@@ -355,7 +344,6 @@ class DemandeService {
    */
   async getDemandeStats(filters?: {
     entreprise_id?: string;
-    lycee_id?: string;
     date_debut?: string;
     date_fin?: string;
   }): Promise<DemandeStats> {
@@ -363,55 +351,43 @@ class DemandeService {
     let params: any[] = [];
     let paramIndex = 1;
 
-    let fromClause = '"Demande"';
-    
     if (filters?.entreprise_id) {
       whereConditions.push(`entreprise_id = $${paramIndex++}`);
       params.push(filters.entreprise_id);
     }
 
-    if (filters?.lycee_id) {
-      // Pour les lycées, on fait un JOIN avec DemandeLycee
-      fromClause = '"Demande" d INNER JOIN "DemandeLycee" dl ON d.id = dl.demande_id';
-      whereConditions.push(`dl.lycee_id = $${paramIndex++}`);
-      params.push(filters.lycee_id);
-    }
-
     if (filters?.date_debut) {
-      const dateField = filters?.lycee_id ? 'd.date_creation' : 'date_creation';
-      whereConditions.push(`${dateField} >= $${paramIndex++}`);
+      whereConditions.push(`date_creation >= $${paramIndex++}`);
       params.push(filters.date_debut);
     }
 
     if (filters?.date_fin) {
-      const dateField = filters?.lycee_id ? 'd.date_creation' : 'date_creation';
-      whereConditions.push(`${dateField} <= $${paramIndex++}`);
+      whereConditions.push(`date_creation <= $${paramIndex++}`);
       params.push(filters.date_fin);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-    const selectPrefix = filters?.lycee_id ? 'd.' : '';
 
     // Stats globales
     const statsResult = await db.query(`
       SELECT 
         COUNT(*) as total,
-        COUNT(CASE WHEN ${selectPrefix}statut = 'EN_ATTENTE' THEN 1 END) as en_attente,
-        COUNT(CASE WHEN ${selectPrefix}statut = 'EN_COURS' THEN 1 END) as en_cours,
-        COUNT(CASE WHEN ${selectPrefix}statut = 'TRAITE' THEN 1 END) as traite,
-        COUNT(CASE WHEN ${selectPrefix}statut = 'ANNULE' THEN 1 END) as annule
-      FROM ${fromClause}
+        COUNT(CASE WHEN statut = 'EN_ATTENTE' THEN 1 END) as en_attente,
+        COUNT(CASE WHEN statut = 'EN_COURS' THEN 1 END) as en_cours,
+        COUNT(CASE WHEN statut = 'TRAITE' THEN 1 END) as traite,
+        COUNT(CASE WHEN statut = 'ANNULE' THEN 1 END) as annule
+      FROM "Demande"
       ${whereClause}
     `, params);
 
     // Stats par mois
     const monthlyResult = await db.query(`
       SELECT 
-        TO_CHAR(${selectPrefix}date_creation, 'YYYY-MM') as mois,
+        TO_CHAR(date_creation, 'YYYY-MM') as mois,
         COUNT(*) as count
-      FROM ${fromClause}
+      FROM "Demande"
       ${whereClause}
-      GROUP BY TO_CHAR(${selectPrefix}date_creation, 'YYYY-MM')
+      GROUP BY TO_CHAR(date_creation, 'YYYY-MM')
       ORDER BY mois DESC
       LIMIT 12
     `, params);

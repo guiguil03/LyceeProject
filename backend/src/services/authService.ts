@@ -132,6 +132,33 @@ export class AuthService {
       throw new Error('Un ID de lycée est requis pour un administrateur de lycée');
     }
     
+    if (role === 'LYCEE_ADMIN' && lycee_id) {
+      // Pour les lycées, vérifier si lycee_id est un UUID ou un code UAI
+      if (!this.isValidUUID(lycee_id)) {
+        // C'est probablement un code UAI, chercher le lycée correspondant
+        const existingLycee = await db.query(
+          'SELECT id FROM "Lycee" WHERE uai = $1',
+          [lycee_id]
+        );
+        
+        if (existingLycee.rows.length > 0) {
+          // Le lycée existe déjà
+          finalLyceeId = existingLycee.rows[0].id;
+        } else {
+          // Créer un lycée temporaire avec ce code UAI
+          const nom = full_name ? `Lycée ${full_name}` : `Lycée ${lycee_id}`;
+          const insertLyceeQuery = `
+            INSERT INTO "Lycee" (nom, uai, created_at, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING id
+          `;
+          
+          const newLycee = await db.query(insertLyceeQuery, [nom, lycee_id]);
+          finalLyceeId = newLycee.rows[0].id;
+        }
+      }
+    }
+    
     if (role === 'ENTREPRISE_ADMIN') {
       // Pour les entreprises, accepter soit un ID soit un SIRET
       if (!entreprise_id && !siret) {
@@ -229,6 +256,14 @@ export class AuthService {
       created_at: user.created_at,
       updated_at: user.updated_at
     };
+  }
+
+  /**
+   * Vérifie si une chaîne est un UUID valide
+   */
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 }
 

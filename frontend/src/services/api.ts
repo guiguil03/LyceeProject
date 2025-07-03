@@ -356,6 +356,27 @@ export const api = {
     }
   },
 
+  // Obtenir une entreprise par SIRET
+  async getEntrepriseBySiret(siret: string): Promise<Entreprise | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/entreprises/${siret}`);
+
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : null;
+    } catch (error) {
+      console.error('Erreur récupération entreprise par SIRET:', error);
+      throw error;
+    }
+  },
+
   // Obtenir toutes les entreprises
   async getEntreprises(filters?: Record<string, unknown>) {
     try {
