@@ -1,25 +1,30 @@
-import db from './databaseService';
+import PrismaService from './prismaService';
 import lyceeService from './lyceeService';
 import siretService from './siretService';
 import { Lycee, Entreprise } from '../types/database';
 
 class SyncService {
+  private prisma = PrismaService.getInstance().getClient();
+
   /**
    * Synchronise un lycée depuis l'API vers la base de données
    */
   async syncLyceeFromAPI(lyceeAPI: any): Promise<string> {
     try {
       // Vérifier si le lycée existe déjà
-      const existingResult = await db.query(
-        'SELECT id FROM "Lycee" WHERE numero_uai = $1 OR nom = $2',
-        [lyceeAPI.numero_uai, lyceeAPI.nom_etablissement]
-      );
+      const existingLycee = await this.prisma.lycee.findFirst({
+        where: {
+          OR: [
+            { numeroUai: lyceeAPI.numero_uai },
+            { nom: lyceeAPI.nom_etablissement }
+          ]
+        }
+      });
 
-      if (existingResult.rows.length > 0) {
+      if (existingLycee) {
         // Mettre à jour le lycée existant
-        const lyceeId = existingResult.rows[0].id;
-        await this.updateLyceeFromAPI(lyceeId, lyceeAPI);
-        return lyceeId;
+        await this.updateLyceeFromAPI(existingLycee.id, lyceeAPI);
+        return existingLycee.id;
       } else {
         // Créer un nouveau lycée
         return await this.createLyceeFromAPI(lyceeAPI);
@@ -37,71 +42,72 @@ class SyncService {
     // Récupérer l'ID de la région si elle existe
     let regionId = null;
     if (lyceeAPI.libelle_region) {
-      const regionResult = await db.query(
-        'SELECT id FROM "Region" WHERE nom = $1',
-        [lyceeAPI.libelle_region]
-      );
+      let region = await this.prisma.region.findUnique({
+        where: { nom: lyceeAPI.libelle_region }
+      });
       
-      if (regionResult.rows.length === 0) {
+      if (!region) {
         // Créer la région si elle n'existe pas
-        regionId = await db.insertAndReturnId('Region', {
-          nom: lyceeAPI.libelle_region
+        region = await this.prisma.region.create({
+          data: { nom: lyceeAPI.libelle_region }
         });
-      } else {
-        regionId = regionResult.rows[0].id;
       }
+      regionId = region.id;
     }
 
     // Créer le lycée
-    const lyceeData = {
-      nom: lyceeAPI.nom_etablissement,
-      numero_uai: lyceeAPI.numero_uai,
-      type_etablissement: lyceeAPI.type_etablissement,
-      statut_public_prive: lyceeAPI.statut_public_prive,
-      adresse: lyceeAPI.adresse_1,
-      code_postal: lyceeAPI.code_postal_uai,
-      commune: lyceeAPI.libelle_commune,
-      departement: lyceeAPI.libelle_departement,
-      region_id: regionId,
-      latitude: lyceeAPI.latitude,
-      longitude: lyceeAPI.longitude,
-      telephone: lyceeAPI.telephone,
-      email: lyceeAPI.mail,
-      site_web: lyceeAPI.web
-    };
-
-    const lyceeId = await db.insertAndReturnId('Lycee', lyceeData);
+    const lycee = await this.prisma.lycee.create({
+      data: {
+        nom: lyceeAPI.nom_etablissement,
+        numeroUai: lyceeAPI.numero_uai,
+        typeEtablissement: lyceeAPI.type_etablissement,
+        statutPublicPrive: lyceeAPI.statut_public_prive,
+        adresse: lyceeAPI.adresse_1,
+        codePostal: lyceeAPI.code_postal_uai,
+        commune: lyceeAPI.libelle_commune,
+        departement: lyceeAPI.libelle_departement,
+        regionId: regionId,
+        latitude: lyceeAPI.latitude ? parseFloat(lyceeAPI.latitude) : null,
+        longitude: lyceeAPI.longitude ? parseFloat(lyceeAPI.longitude) : null,
+        telephone: lyceeAPI.telephone,
+        email: lyceeAPI.mail,
+        siteWeb: lyceeAPI.web
+      }
+    });
 
     // Synchroniser les formations si disponibles
     if (lyceeAPI.formations && Array.isArray(lyceeAPI.formations)) {
-      await this.syncFormations(lyceeId, lyceeAPI.formations);
+      await this.syncFormations(lycee.id, lyceeAPI.formations);
     }
 
-    console.log(`✅ Lycée synchronisé: ${lyceeAPI.nom_etablissement} (ID: ${lyceeId})`);
-    return lyceeId;
+    console.log(`✅ Lycée synchronisé: ${lyceeAPI.nom_etablissement} (ID: ${lycee.id})`);
+    return lycee.id;
   }
 
   /**
    * Met à jour un lycée existant
    */
   private async updateLyceeFromAPI(lyceeId: string, lyceeAPI: any): Promise<void> {
-    const updateData = {
-      nom: lyceeAPI.nom_etablissement,
-      numero_uai: lyceeAPI.numero_uai,
-      type_etablissement: lyceeAPI.type_etablissement,
-      statut_public_prive: lyceeAPI.statut_public_prive,
-      adresse: lyceeAPI.adresse_1,
-      code_postal: lyceeAPI.code_postal_uai,
-      commune: lyceeAPI.libelle_commune,
-      departement: lyceeAPI.libelle_departement,
-      latitude: lyceeAPI.latitude,
-      longitude: lyceeAPI.longitude,
-      telephone: lyceeAPI.telephone,
-      email: lyceeAPI.mail,
-      site_web: lyceeAPI.web
-    };
-
-    await db.updateById('Lycee', lyceeId, updateData);
+    await this.prisma.lycee.update({
+      where: { id: lyceeId },
+      data: {
+        nom: lyceeAPI.nom_etablissement,
+        numeroUai: lyceeAPI.numero_uai,
+        typeEtablissement: lyceeAPI.type_etablissement,
+        statutPublicPrive: lyceeAPI.statut_public_prive,
+        adresse: lyceeAPI.adresse_1,
+        codePostal: lyceeAPI.code_postal_uai,
+        commune: lyceeAPI.libelle_commune,
+        departement: lyceeAPI.libelle_departement,
+        latitude: lyceeAPI.latitude ? parseFloat(lyceeAPI.latitude) : null,
+        longitude: lyceeAPI.longitude ? parseFloat(lyceeAPI.longitude) : null,
+        telephone: lyceeAPI.telephone,
+        email: lyceeAPI.mail,
+        siteWeb: lyceeAPI.web,
+        updatedAt: new Date()
+      }
+    });
+    
     console.log(`🔄 Lycée mis à jour: ${lyceeAPI.nom_etablissement}`);
   }
 
@@ -111,16 +117,14 @@ class SyncService {
   async syncEntrepriseFromAPI(entrepriseAPI: any): Promise<string> {
     try {
       // Vérifier si l'entreprise existe déjà
-      const existingResult = await db.query(
-        'SELECT id FROM "Entreprise" WHERE siret = $1',
-        [entrepriseAPI.siret]
-      );
+      const existingEntreprise = await this.prisma.entreprise.findUnique({
+        where: { siret: entrepriseAPI.siret }
+      });
 
-      if (existingResult.rows.length > 0) {
+      if (existingEntreprise) {
         // Mettre à jour l'entreprise existante
-        const entrepriseId = existingResult.rows[0].id;
-        await this.updateEntrepriseFromAPI(entrepriseId, entrepriseAPI);
-        return entrepriseId;
+        await this.updateEntrepriseFromAPI(existingEntreprise.id, entrepriseAPI);
+        return existingEntreprise.id;
       } else {
         // Créer une nouvelle entreprise
         return await this.createEntrepriseFromAPI(entrepriseAPI);
@@ -135,40 +139,44 @@ class SyncService {
    * Crée une entreprise en base depuis les données API
    */
   private async createEntrepriseFromAPI(entrepriseAPI: any): Promise<string> {
-    const entrepriseData = {
-      nom: entrepriseAPI.denominationSociale,
-      siret: entrepriseAPI.siret,
-      siren: entrepriseAPI.siren,
-      secteur_activite: entrepriseAPI.secteurActivite,
-      adresse: `${entrepriseAPI.adresse?.numeroVoie || ''} ${entrepriseAPI.adresse?.typeVoie || ''} ${entrepriseAPI.adresse?.libelleVoie || ''}`.trim(),
-      code_postal: entrepriseAPI.adresse?.codePostal,
-      commune: entrepriseAPI.adresse?.commune,
-      departement: entrepriseAPI.adresse?.departement,
-      latitude: entrepriseAPI.coordonnees?.latitude,
-      longitude: entrepriseAPI.coordonnees?.longitude
-    };
+    const entreprise = await this.prisma.entreprise.create({
+      data: {
+        nom: entrepriseAPI.denominationSociale,
+        siret: entrepriseAPI.siret,
+        siren: entrepriseAPI.siren,
+        secteurActivite: entrepriseAPI.secteurActivite,
+        adresse: `${entrepriseAPI.adresse?.numeroVoie || ''} ${entrepriseAPI.adresse?.typeVoie || ''} ${entrepriseAPI.adresse?.libelleVoie || ''}`.trim(),
+        codePostal: entrepriseAPI.adresse?.codePostal,
+        commune: entrepriseAPI.adresse?.commune,
+        departement: entrepriseAPI.adresse?.departement,
+        latitude: entrepriseAPI.coordonnees?.latitude ? parseFloat(entrepriseAPI.coordonnees.latitude) : null,
+        longitude: entrepriseAPI.coordonnees?.longitude ? parseFloat(entrepriseAPI.coordonnees.longitude) : null
+      }
+    });
 
-    const entrepriseId = await db.insertAndReturnId('Entreprise', entrepriseData);
-    console.log(`✅ Entreprise synchronisée: ${entrepriseAPI.denominationSociale} (ID: ${entrepriseId})`);
-    return entrepriseId;
+    console.log(`✅ Entreprise synchronisée: ${entrepriseAPI.denominationSociale} (ID: ${entreprise.id})`);
+    return entreprise.id;
   }
 
   /**
    * Met à jour une entreprise existante
    */
   private async updateEntrepriseFromAPI(entrepriseId: string, entrepriseAPI: any): Promise<void> {
-    const updateData = {
-      nom: entrepriseAPI.denominationSociale,
-      secteur_activite: entrepriseAPI.secteurActivite,
-      adresse: `${entrepriseAPI.adresse?.numeroVoie || ''} ${entrepriseAPI.adresse?.typeVoie || ''} ${entrepriseAPI.adresse?.libelleVoie || ''}`.trim(),
-      code_postal: entrepriseAPI.adresse?.codePostal,
-      commune: entrepriseAPI.adresse?.commune,
-      departement: entrepriseAPI.adresse?.departement,
-      latitude: entrepriseAPI.coordonnees?.latitude,
-      longitude: entrepriseAPI.coordonnees?.longitude
-    };
+    await this.prisma.entreprise.update({
+      where: { id: entrepriseId },
+      data: {
+        nom: entrepriseAPI.denominationSociale,
+        secteurActivite: entrepriseAPI.secteurActivite,
+        adresse: `${entrepriseAPI.adresse?.numeroVoie || ''} ${entrepriseAPI.adresse?.typeVoie || ''} ${entrepriseAPI.adresse?.libelleVoie || ''}`.trim(),
+        codePostal: entrepriseAPI.adresse?.codePostal,
+        commune: entrepriseAPI.adresse?.commune,
+        departement: entrepriseAPI.adresse?.departement,
+        latitude: entrepriseAPI.coordonnees?.latitude ? parseFloat(entrepriseAPI.coordonnees.latitude) : null,
+        longitude: entrepriseAPI.coordonnees?.longitude ? parseFloat(entrepriseAPI.coordonnees.longitude) : null,
+        updatedAt: new Date()
+      }
+    });
 
-    await db.updateById('Entreprise', entrepriseId, updateData);
     console.log(`🔄 Entreprise mise à jour: ${entrepriseAPI.denominationSociale}`);
   }
 
@@ -180,20 +188,24 @@ class SyncService {
       if (!formationNom || formationNom.trim() === '') continue;
 
       // Vérifier si la formation existe déjà pour ce lycée
-      const existingResult = await db.query(
-        'SELECT id FROM "Formation" WHERE lycee_id = $1 AND intitule = $2',
-        [lyceeId, formationNom.trim()]
-      );
+      const existingFormation = await this.prisma.formation.findFirst({
+        where: {
+          lyceeId: lyceeId,
+          intitule: formationNom.trim()
+        }
+      });
 
-      if (existingResult.rows.length === 0) {
+      if (!existingFormation) {
         // Essayer de déterminer le domaine et métier
         const { domaineId, metierId } = await this.inferDomaineMetier(formationNom);
 
-        await db.insertAndReturnId('Formation', {
-          lycee_id: lyceeId,
-          intitule: formationNom.trim(),
-          domaine_id: domaineId,
-          metier_id: metierId
+        await this.prisma.formation.create({
+          data: {
+            lyceeId: lyceeId,
+            intitule: formationNom.trim(),
+            domaineId: domaineId,
+            metierId: metierId
+          }
         });
       }
     }
@@ -206,18 +218,16 @@ class SyncService {
     const formationLower = formation.toLowerCase();
     
     // Récupérer tous les domaines et métiers
-    const domainesResult = await db.query('SELECT * FROM "Domaine"');
-    const metiersResult = await db.query(`
-      SELECT m.*, d.nom as domaine_nom 
-      FROM "Metier" m 
-      LEFT JOIN "Domaine" d ON m.domaine_id = d.id
-    `);
+    const domaines = await this.prisma.domaine.findMany();
+    const metiers = await this.prisma.metier.findMany({
+      include: { domaine: true }
+    });
 
     let domaineId = null;
     let metierId = null;
 
     // Recherche par mots-clés dans les domaines
-    for (const domaine of domainesResult.rows) {
+    for (const domaine of domaines) {
       const motsCles = this.getMotsClesDomaine(domaine.nom);
       if (motsCles.some(mot => formationLower.includes(mot))) {
         domaineId = domaine.id;
@@ -226,12 +236,12 @@ class SyncService {
     }
 
     // Recherche par mots-clés dans les métiers
-    for (const metier of metiersResult.rows) {
+    for (const metier of metiers) {
       const motsCles = metier.nom.toLowerCase().split(' ');
       if (motsCles.some((mot: string) => formationLower.includes(mot)) || formationLower.includes(metier.nom.toLowerCase())) {
         metierId = metier.id;
         if (!domaineId) {
-          domaineId = metier.domaine_id;
+          domaineId = metier.domaineId;
         }
         break;
       }
