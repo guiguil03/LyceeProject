@@ -11,7 +11,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/
     networks:
       - lyceeproject-network
     restart: unless-stopped
@@ -24,6 +24,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       FRONTEND_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:password@database:5432/lyceeproject
       DB_HOST: database
       DB_PORT: 5432
       DB_NAME: lyceeproject

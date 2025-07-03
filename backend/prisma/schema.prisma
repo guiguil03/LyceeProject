@@ -1,0 +1,247 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Table des régions
+model Region {
+  id        String   @id @default(cuid())
+  nom       String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  lycees Lycee[]
+
+  @@map("Region")
+}
+
+// Table des domaines de formation
+model Domaine {
+  id          String   @id @default(cuid())
+  nom         String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  metiers    Metier[]
+  formations Formation[]
+
+  @@map("Domaine")
+}
+
+// Table des métiers
+model Metier {
+  id          String   @id @default(cuid())
+  nom         String   @db.VarChar(255)
+  domaineId   String   @map("domaine_id")
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  domaine    Domaine     @relation(fields: [domaineId], references: [id], onDelete: Cascade)
+  formations Formation[]
+  demandes   Demande[]
+
+  @@map("Metier")
+}
+
+// Table des lycées
+model Lycee {
+  id                String   @id @default(cuid())
+  nom               String   @db.VarChar(255)
+  numeroUai         String?  @unique @map("numero_uai") @db.VarChar(20)
+  typeEtablissement String?  @map("type_etablissement") @db.VarChar(100)
+  statutPublicPrive String?  @map("statut_public_prive") @db.VarChar(20)
+  adresse           String   @db.Text
+  codePostal        String?  @map("code_postal") @db.VarChar(10)
+  commune           String?  @db.VarChar(255)
+  departement       String?  @db.VarChar(255)
+  regionId          String?  @map("region_id")
+  latitude          Decimal? @db.Decimal(10, 8)
+  longitude         Decimal? @db.Decimal(11, 8)
+  telephone         String?  @db.VarChar(20)
+  email             String?  @db.VarChar(255)
+  siteWeb           String?  @map("site_web") @db.VarChar(500)
+  description       String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  region             Region?            @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  formations         Formation[]
+  plateauxTechniques PlateauTechnique[]
+  users              User[]
+  demandeLycees      DemandeLycee[]
+
+  @@map("Lycee")
+}
+
+// Table des formations
+model Formation {
+  id          String   @id @default(cuid())
+  lyceeId     String   @map("lycee_id")
+  intitule    String   @db.VarChar(500)
+  domaineId   String?  @map("domaine_id")
+  metierId    String?  @map("metier_id")
+  niveau      String?  @db.VarChar(50)
+  modalite    String?  @db.VarChar(100)
+  dureeMois   Int?     @map("duree_mois")
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  lycee   Lycee    @relation(fields: [lyceeId], references: [id], onDelete: Cascade)
+  domaine Domaine? @relation(fields: [domaineId], references: [id], onDelete: SetNull)
+  metier  Metier?  @relation(fields: [metierId], references: [id], onDelete: SetNull)
+
+  @@map("Formation")
+}
+
+// Table des plateaux techniques
+model PlateauTechnique {
+  id                String   @id @default(cuid())
+  lyceeId           String   @map("lycee_id")
+  nom               String   @db.VarChar(255)
+  description       String?  @db.Text
+  capaciteEtudiants Int?     @map("capacite_etudiants")
+  equipements       String[] @db.Text
+  imageUrl          String?  @map("image_url") @db.VarChar(500)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  lycee Lycee @relation(fields: [lyceeId], references: [id], onDelete: Cascade)
+
+  @@map("PlateauTechnique")
+}
+
+// Table des entreprises
+model Entreprise {
+  id              String   @id @default(cuid())
+  nom             String   @db.VarChar(255)
+  siret           String?  @unique @db.VarChar(14)
+  siren           String?  @db.VarChar(9)
+  secteurActivite String?  @map("secteur_activite") @db.VarChar(255)
+  codeNaf         String?  @map("code_naf") @db.VarChar(10)
+  adresse         String?  @db.Text
+  codePostal      String?  @map("code_postal") @db.VarChar(10)
+  commune         String?  @db.VarChar(255)
+  departement     String?  @db.VarChar(255)
+  latitude        Decimal? @db.Decimal(10, 8)
+  longitude       Decimal? @db.Decimal(11, 8)
+  telephone       String?  @db.VarChar(20)
+  email           String?  @db.VarChar(255)
+  siteWeb         String?  @map("site_web") @db.VarChar(500)
+  effectif        String?  @db.VarChar(50)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  users    User[]
+  demandes Demande[]
+
+  @@map("Entreprise")
+}
+
+// Table des utilisateurs
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         String    @default("USER") @db.VarChar(50)
+  fullName     String?   @map("full_name") @db.VarChar(255)
+  lyceeId      String?   @map("lycee_id")
+  entrepriseId String?   @map("entreprise_id")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login") @db.Timestamp(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  lycee                 Lycee?         @relation(fields: [lyceeId], references: [id], onDelete: SetNull)
+  entreprise            Entreprise?    @relation(fields: [entrepriseId], references: [id], onDelete: SetNull)
+  actions               Action[]
+  demandeLyceesTraitees DemandeLycee[] @relation("UserTraitement")
+
+  @@map("User")
+}
+
+// Table des demandes de partenariat
+model Demande {
+  id                 String    @id @default(cuid())
+  entrepriseId       String    @map("entreprise_id")
+  metierId           String?   @map("metier_id")
+  titre              String    @db.VarChar(255)
+  description        String?   @db.Text
+  typePartenariat    String?   @map("type_partenariat") @db.VarChar(100)
+  zoneGeo            String?   @map("zone_geo") @db.VarChar(255)
+  nbPlaces           Int?      @map("nb_places")
+  dateDebutSouhaitee DateTime? @map("date_debut_souhaitee") @db.Date
+  dateFinSouhaitee   DateTime? @map("date_fin_souhaitee") @db.Date
+  statut             String    @default("EN_ATTENTE") @db.VarChar(50)
+  priorite           String    @default("NORMALE") @db.VarChar(20)
+  dateCreation       DateTime  @default(now()) @map("date_creation") @db.Timestamp(6)
+  dateModification   DateTime  @default(now()) @updatedAt @map("date_modification") @db.Timestamp(6)
+
+  // Relations
+  entreprise    Entreprise     @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  metier        Metier?        @relation(fields: [metierId], references: [id], onDelete: SetNull)
+  demandeLycees DemandeLycee[]
+  actions       Action[]
+
+  @@map("Demande")
+}
+
+// Table de liaison demande-lycée
+model DemandeLycee {
+  id               String    @id @default(cuid())
+  demandeId        String    @map("demande_id")
+  lyceeId          String    @map("lycee_id")
+  note             String?   @db.Text
+  statutTraitement String    @default("NOUVEAU") @map("statut_traitement") @db.VarChar(50)
+  scoreMatching    Decimal?  @map("score_matching") @db.Decimal(3, 2)
+  distanceKm       Decimal?  @map("distance_km") @db.Decimal(6, 2)
+  dateAffectation  DateTime  @default(now()) @map("date_affectation") @db.Timestamp(6)
+  dateReponse      DateTime? @map("date_reponse") @db.Timestamp(6)
+  userTraitementId String?   @map("user_traitement_id")
+
+  // Relations
+  demande        Demande  @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  lycee          Lycee    @relation(fields: [lyceeId], references: [id], onDelete: Cascade)
+  userTraitement User?    @relation("UserTraitement", fields: [userTraitementId], references: [id], onDelete: SetNull)
+  actions        Action[]
+
+  @@unique([demandeId, lyceeId])
+  @@map("DemandeLycee")
+}
+
+// Table des actions/historique
+model Action {
+  id             String   @id @default(cuid())
+  demandeId      String?  @map("demande_id")
+  demandeLyceeId String?  @map("demande_lycee_id")
+  userId         String   @map("user_id")
+  typeAction     String   @map("type_action") @db.VarChar(100)
+  commentaire    String?  @db.Text
+  donneesAvant   Json?    @map("donnees_avant") @db.JsonB
+  donneesApres   Json?    @map("donnees_apres") @db.JsonB
+  dateAction     DateTime @default(now()) @map("date_action") @db.Timestamp(6)
+
+  // Relations
+  demande      Demande?      @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  demandeLycee DemandeLycee? @relation(fields: [demandeLyceeId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Action")
+}
