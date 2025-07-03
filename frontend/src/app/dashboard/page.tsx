@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '@/services/api';
 
 interface Stats {
@@ -16,13 +18,19 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
+      return;
+    }
     loadStats();
-  }, []);
+  }, [isAuthenticated, router]);
 
   const loadStats = async () => {
     setLoading(true);
@@ -33,7 +41,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       setError('Erreur lors du chargement des statistiques');
-      console.error(error);
+      console.error('Erreur récupération stats:', error);
     } finally {
       setLoading(false);
     }
@@ -43,6 +51,21 @@ export default function DashboardPage() {
     return total > 0 ? Math.round((value / total) * 100) : 0;
   };
 
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="fr-container fr-py-6w">
+        <div className="fr-alert fr-alert--info">
+          <p>Redirection en cours...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fr-container fr-py-6w">
       <div className="fr-grid-row fr-grid-row--gutters">
@@ -51,6 +74,36 @@ export default function DashboardPage() {
             <span className="fr-icon-line-chart-line fr-mr-2w" aria-hidden="true"></span>
             Tableau de bord
           </h1>
+
+          {/* Informations utilisateur */}
+          <div className="fr-mb-6w">
+            <div className="fr-card fr-card--sm">
+              <div className="fr-card__body">
+                <div className="fr-card__content">
+                  <h3 className="fr-card__title">
+                    <span className={`fr-icon-${user.role === 'LYCEE_ADMIN' ? 'school' : 'building'}-line fr-mr-2w`} aria-hidden="true"></span>
+                    {user.role === 'LYCEE_ADMIN' ? 'Espace Lycée' : 'Espace Entreprise'}
+                  </h3>
+                  <p className="fr-card__desc">
+                    Connecté en tant que : <strong>{user.full_name || user.email}</strong>
+                    <br />
+                    Rôle : <span className="fr-badge fr-badge--blue-ecume">{user.role}</span>
+                  </p>
+                  <div className="fr-card__end">
+                    <button 
+                      type="button"
+                      className="fr-btn fr-btn--tertiary fr-btn--sm"
+                      onClick={handleLogout}
+                    >
+                      <span className="fr-icon-logout-box-line fr-mr-1w" aria-hidden="true"></span>
+                      Se déconnecter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <p className="fr-text--lead fr-mb-6w">
             Vue d'ensemble des demandes de partenariat et de l'activité de la plateforme
           </p>

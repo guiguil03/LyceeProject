@@ -1,3 +1,5 @@
+import authService from './auth';
+
 // Service API pour les appels vers le backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -135,6 +137,7 @@ export const api = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authService.getAuthHeader(),
         },
         body: JSON.stringify(searchParams),
       });
@@ -156,6 +159,7 @@ export const api = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authService.getAuthHeader(),
         },
       });
 
@@ -177,7 +181,7 @@ export const api = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'user-id': 'temp-user-id', // À remplacer par un vrai système d'auth
+          ...authService.getAuthHeader(),
         },
         body: JSON.stringify(data),
       });

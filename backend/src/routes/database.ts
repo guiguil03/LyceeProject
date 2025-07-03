@@ -3,6 +3,7 @@ import demandeService from '../services/demandeService';
 import syncService from '../services/syncService'; // Nouvelle import
 import db from '../services/databaseService';
 import { CreateDemandeRequest, UpdateDemandeRequest } from '../types/database';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -76,15 +77,11 @@ router.post('/sync/entreprise/:siret', async (req, res) => {
  * POST /api/db/demandes
  * Crée une nouvelle demande de partenariat
  */
-router.post('/demandes', async (req, res) => {
+router.post('/demandes', authenticateToken, async (req, res) => {
   try {
     const data: CreateDemandeRequest = req.body;
-    const userId = req.headers['user-id'] as string; // À adapter selon votre système d'auth
+    const userId = (req as any).user.userId; // Utiliser l'utilisateur authentifié
     
-    if (!userId) {
-      return res.status(401).json({ error: 'Utilisateur non authentifié' });
-    }
-
     const demandeId = await demandeService.createDemande(data, userId);
     
     res.status(201).json({
@@ -105,8 +102,10 @@ router.post('/demandes', async (req, res) => {
  * GET /api/db/demandes
  * Recherche des demandes avec filtres
  */
-router.get('/demandes', async (req, res) => {
+router.get('/demandes', authenticateToken, async (req, res) => {
   try {
+    const user = (req as any).user; // Utilisateur authentifié
+    
     const filters = {
       entreprise_id: req.query.entreprise_id as string,
       statut: req.query.statut as string,
@@ -119,6 +118,14 @@ router.get('/demandes', async (req, res) => {
       page: req.query.page ? parseInt(req.query.page as string) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 20
     };
+
+    // Filtrer automatiquement selon le rôle de l'utilisateur
+    if (user.role === 'ENTREPRISE_ADMIN' && user.entreprise_id) {
+      filters.entreprise_id = user.entreprise_id;
+    } else if (user.role === 'LYCEE_ADMIN' && user.lycee_id) {
+      // Pour les lycées, on récupère les demandes qui leur sont assignées
+      filters.lycee_id = user.lycee_id;
+    }
 
     const result = await demandeService.searchDemandes(filters);
     
@@ -301,13 +308,23 @@ router.get('/demandes/:id/actions', async (req, res) => {
  * GET /api/db/stats/demandes
  * Statistiques des demandes
  */
-router.get('/stats/demandes', async (req, res) => {
+router.get('/stats/demandes', authenticateToken, async (req, res) => {
   try {
+    const user = (req as any).user; // Utilisateur authentifié
+    
     const filters = {
       entreprise_id: req.query.entreprise_id as string,
       date_debut: req.query.date_debut as string,
       date_fin: req.query.date_fin as string
     };
+
+    // Filtrer automatiquement selon le rôle de l'utilisateur
+    if (user.role === 'ENTREPRISE_ADMIN' && user.entreprise_id) {
+      filters.entreprise_id = user.entreprise_id;
+    } else if (user.role === 'LYCEE_ADMIN' && user.lycee_id) {
+      // Pour les lycées, on ajoute le filtrage par lycée
+      (filters as any).lycee_id = user.lycee_id;
+    }
 
     const stats = await demandeService.getDemandeStats(filters);
     

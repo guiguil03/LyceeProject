@@ -2,13 +2,17 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const profileType = searchParams.get('type') as 'entreprise' | 'lycee' | null;
+  const { login, register } = useAuth();
   
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -26,19 +30,46 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
     
-    if (isLogin) {
-      // TODO: Implémenter la logique de connexion
-      console.log('Login:', formData.email, formData.password, profileType);
-      router.push('/dashboard');
-    } else {
-      // TODO: Implémenter la logique d'inscription
-      if (formData.password !== formData.confirmPassword) {
-        alert('Les mots de passe ne correspondent pas');
-        return;
+    try {
+      if (isLogin) {
+        await login(formData.email, formData.password);
+        router.push('/dashboard');
+      } else {
+        // Validation des mots de passe
+        if (formData.password !== formData.confirmPassword) {
+          setError('Les mots de passe ne correspondent pas');
+          setLoading(false);
+          return;
+        }
+
+        // Déterminer le rôle basé sur le type de profil
+        const role = profileType === 'lycee' ? 'LYCEE_ADMIN' : 'ENTREPRISE_ADMIN';
+        
+        const userData = {
+          email: formData.email,
+          password: formData.password,
+          role,
+          full_name: formData.nom,
+          // Ajouter les données spécifiques au profil
+          ...(profileType === 'entreprise' && {
+            siret: formData.profil.siret,
+            nom_entreprise: formData.profil.nom
+          }),
+          ...(profileType === 'lycee' && {
+            lycee_id: formData.profil.uai // Utiliser l'UAI comme ID temporaire
+          })
+        };
+
+        await register(userData);
+        router.push('/dashboard');
       }
-      console.log('Register:', formData, profileType);
-      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +130,13 @@ export default function AuthPage() {
               }
             </p>
           </div>
+
+          {/* Affichage des erreurs */}
+          {error && (
+            <div className="fr-alert fr-alert--error fr-mb-4w">
+              <p>{error}</p>
+            </div>
+          )}
 
           {/* Formulaire */}
           <form onSubmit={handleSubmit}>
@@ -269,8 +307,9 @@ export default function AuthPage() {
               <button
                 type="submit"
                 className="fr-btn fr-btn--icon-left fr-icon-check-line"
+                disabled={loading}
               >
-                {isLogin ? 'Se connecter' : "S'inscrire"}
+                {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : "S'inscrire")}
               </button>
             </div>
           </form>

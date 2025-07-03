@@ -208,6 +208,18 @@ export interface CreateUserRequest {
   entreprise_id?: string;
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  role: 'USER' | 'LYCEE_ADMIN' | 'ENTREPRISE_ADMIN' | 'SUPER_ADMIN';
+  full_name?: string;
+  lycee_id?: string;
+  entreprise_id?: string;
+  // Pour les entreprises : utiliser le SIRET au lieu de l'ID
+  siret?: string;
+  nom_entreprise?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

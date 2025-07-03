@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "../contexts/AuthContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700;800&display=swap" rel="stylesheet" />
       </head>
       <body>
+        <AuthProvider>
         {/* Header DSFR */}
         <header className="fr-header">
           <div className="fr-header__body">
@@ -132,6 +134,7 @@ export default function RootLayout({
           noModule
           src="https://unpkg.com/@gouvfr/dsfr@1.11.2/dist/dsfr.nomodule.min.js"
         />
+        </AuthProvider>
       </body>
     </html>
   );
