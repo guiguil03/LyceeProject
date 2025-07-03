@@ -24,6 +24,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       FRONTEND_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:password@database:5432/lyceeproject
       DB_HOST: database
       DB_PORT: 5432
       DB_NAME: lyceeproject

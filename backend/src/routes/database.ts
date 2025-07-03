@@ -1,10 +1,14 @@
 import express from 'express';
-import demandeService from '../services/demandeService';
-import syncService from '../services/syncService'; // Nouvelle import
-import db from '../services/databaseService';
+import DemandeServicePrisma from '../services/demandeServicePrisma';
+import syncService from '../services/syncService';
+import PrismaService from '../services/prismaService';
 import { CreateDemandeRequest, UpdateDemandeRequest } from '../types/database';
 
 const router = express.Router();
+
+// Instance du service Prisma
+const demandeService = new DemandeServicePrisma();
+const prisma = PrismaService.getInstance().getClient();
 
 // ================================
 // ROUTES DE SYNCHRONISATION
@@ -78,12 +82,19 @@ router.post('/sync/entreprise/:siret', async (req, res) => {
  */
 router.post('/demandes', async (req, res) => {
   try {
-    const data: CreateDemandeRequest = req.body;
+    const rawData: CreateDemandeRequest = req.body;
     const userId = req.headers['user-id'] as string; // À adapter selon votre système d'auth
     
     if (!userId) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
+
+    // Convertir les dates string en objets Date
+    const data = {
+      ...rawData,
+      date_debut_souhaitee: rawData.date_debut_souhaitee ? new Date(rawData.date_debut_souhaitee) : undefined,
+      date_fin_souhaitee: rawData.date_fin_souhaitee ? new Date(rawData.date_fin_souhaitee) : undefined
+    };
 
     const demandeId = await demandeService.createDemande(data, userId);
     
@@ -172,12 +183,19 @@ router.get('/demandes/:id', async (req, res) => {
  */
 router.put('/demandes/:id', async (req, res) => {
   try {
-    const data: UpdateDemandeRequest = req.body;
+    const rawData: UpdateDemandeRequest = req.body;
     const userId = req.headers['user-id'] as string;
     
     if (!userId) {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
+
+    // Convertir les dates string en objets Date
+    const data = {
+      ...rawData,
+      date_debut_souhaitee: rawData.date_debut_souhaitee ? new Date(rawData.date_debut_souhaitee) : undefined,
+      date_fin_souhaitee: rawData.date_fin_souhaitee ? new Date(rawData.date_fin_souhaitee) : undefined
+    };
 
     const success = await demandeService.updateDemande(req.params.id, data, userId);
     
@@ -330,67 +348,65 @@ router.get('/stats/demandes', async (req, res) => {
 
 /**
  * GET /api/db/lycees
- * Recherche des lycées dans la base de données
+ * Liste des lycées avec filtres
  */
 router.get('/lycees', async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, region, departement } = req.query;
+    const { page = 1, limit = 20, region, departement, search } = req.query;
     
-    let whereConditions: string[] = [];
-    let params: any[] = [];
-    let paramIndex = 1;
+    const pageNum = Number(page);
+    const limitNum = Math.min(Number(limit), 100); // Maximum 100 résultats
+    const skip = (pageNum - 1) * limitNum;
 
-    if (search) {
-      whereConditions.push(`(nom ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
+    // Construction des filtres Prisma
+    const where: any = {};
+    
     if (region) {
-      whereConditions.push(`region_id = (SELECT id FROM "Region" WHERE nom = $${paramIndex})`);
-      params.push(region);
-      paramIndex++;
+      where.region = { nom: { contains: region as string, mode: 'insensitive' } };
     }
-
+    
     if (departement) {
-      whereConditions.push(`departement = $${paramIndex}`);
-      params.push(departement);
-      paramIndex++;
+      where.departement = departement as string;
+    }
+    
+    if (search) {
+      where.OR = [
+        { nom: { contains: search as string, mode: 'insensitive' } },
+        { commune: { contains: search as string, mode: 'insensitive' } },
+        { numeroUai: { contains: search as string, mode: 'insensitive' } }
+      ];
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-    const { clause: paginationClause } = db.buildPaginationClause(Number(page), Number(limit));
+    // Récupération des lycées avec comptage des formations
+    const [lycees, total] = await Promise.all([
+      prisma.lycee.findMany({
+        where,
+        include: {
+          region: { select: { nom: true } },
+          formations: { select: { id: true } }
+        },
+        orderBy: { nom: 'asc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.lycee.count({ where })
+    ]);
 
-    const lyceesResult = await db.query(`
-      SELECT 
-        l.*,
-        r.nom as region_nom,
-        (
-          SELECT COUNT(*) 
-          FROM "Formation" f 
-          WHERE f.lycee_id = l.id
-        ) as nb_formations
-      FROM "Lycee" l
-      LEFT JOIN "Region" r ON l.region_id = r.id
-      ${whereClause}
-      ORDER BY l.nom
-      ${paginationClause}
-    `, params);
-
-    const countResult = await db.query(`
-      SELECT COUNT(*) as total
-      FROM "Lycee" l
-      ${whereClause}
-    `, params);
+    // Transformation des données pour correspondre à l'ancien format
+    const lyceesWithCount = lycees.map(lycee => ({
+      ...lycee,
+      region_nom: lycee.region?.nom || null,
+      nb_formations: lycee.formations.length
+    }));
 
     res.json({
       success: true,
-      data: lyceesResult.rows,
+      data: lyceesWithCount,
       pagination: {
-        total: parseInt(countResult.rows[0].total),
-        page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(parseInt(countResult.rows[0].total) / Number(limit))
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -408,48 +424,42 @@ router.get('/lycees', async (req, res) => {
  */
 router.get('/lycees/:id', async (req, res) => {
   try {
-    const lyceeResult = await db.query(`
-      SELECT 
-        l.*,
-        r.nom as region_nom
-      FROM "Lycee" l
-      LEFT JOIN "Region" r ON l.region_id = r.id
-      WHERE l.id = $1
-    `, [req.params.id]);
+    const lycee = await prisma.lycee.findUnique({
+      where: { id: req.params.id },
+      include: {
+        region: { select: { nom: true } },
+        formations: {
+          include: {
+            domaine: { select: { nom: true } },
+            metier: { select: { nom: true } }
+          },
+          orderBy: { intitule: 'asc' }
+        },
+        plateauxTechniques: {
+          orderBy: { nom: 'asc' }
+        }
+      }
+    });
 
-    if (lyceeResult.rows.length === 0) {
+    if (!lycee) {
       return res.status(404).json({ error: 'Lycée non trouvé' });
     }
 
-    const lycee = lyceeResult.rows[0];
-
-    // Récupérer les formations
-    const formationsResult = await db.query(`
-      SELECT 
-        f.*,
-        d.nom as domaine_nom,
-        m.nom as metier_nom
-      FROM "Formation" f
-      LEFT JOIN "Domaine" d ON f.domaine_id = d.id
-      LEFT JOIN "Metier" m ON f.metier_id = m.id
-      WHERE f.lycee_id = $1
-      ORDER BY f.intitule
-    `, [req.params.id]);
-
-    // Récupérer les plateaux techniques
-    const plateauxResult = await db.query(`
-      SELECT * FROM "PlateauTechnique"
-      WHERE lycee_id = $1
-      ORDER BY nom
-    `, [req.params.id]);
+    // Transformation des données pour correspondre à l'ancien format
+    const response = {
+      ...lycee,
+      region_nom: lycee.region?.nom || null,
+      formations: lycee.formations.map(f => ({
+        ...f,
+        domaine_nom: f.domaine?.nom || null,
+        metier_nom: f.metier?.nom || null
+      })),
+      plateaux_techniques: lycee.plateauxTechniques
+    };
 
     res.json({
       success: true,
-      data: {
-        ...lycee,
-        formations: formationsResult.rows,
-        plateaux_techniques: plateauxResult.rows
-      }
+      data: response
     });
   } catch (error) {
     console.error('Erreur récupération lycée:', error);
@@ -472,53 +482,52 @@ router.get('/entreprises', async (req, res) => {
   try {
     const { page = 1, limit = 20, search, secteur } = req.query;
     
-    let whereConditions: string[] = [];
-    let params: any[] = [];
-    let paramIndex = 1;
+    const pageNum = Number(page);
+    const limitNum = Math.min(Number(limit), 100);
+    const skip = (pageNum - 1) * limitNum;
 
+    // Construction des filtres Prisma
+    const where: any = {};
+    
     if (search) {
-      whereConditions.push(`(nom ILIKE $${paramIndex} OR siret ILIKE $${paramIndex})`);
-      params.push(`%${search}%`);
-      paramIndex++;
+      where.OR = [
+        { nom: { contains: search as string, mode: 'insensitive' } },
+        { siret: { contains: search as string, mode: 'insensitive' } }
+      ];
     }
-
+    
     if (secteur) {
-      whereConditions.push(`secteur_activite ILIKE $${paramIndex}`);
-      params.push(`%${secteur}%`);
-      paramIndex++;
+      where.secteurActivite = { contains: secteur as string, mode: 'insensitive' };
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-    const { clause: paginationClause } = db.buildPaginationClause(Number(page), Number(limit));
+    // Récupération des entreprises avec comptage des demandes
+    const [entreprises, total] = await Promise.all([
+      prisma.entreprise.findMany({
+        where,
+        include: {
+          demandes: { select: { id: true } }
+        },
+        orderBy: { nom: 'asc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.entreprise.count({ where })
+    ]);
 
-    const entreprisesResult = await db.query(`
-      SELECT 
-        e.*,
-        (
-          SELECT COUNT(*) 
-          FROM "Demande" d 
-          WHERE d.entreprise_id = e.id
-        ) as nb_demandes
-      FROM "Entreprise" e
-      ${whereClause}
-      ORDER BY e.nom
-      ${paginationClause}
-    `, params);
-
-    const countResult = await db.query(`
-      SELECT COUNT(*) as total
-      FROM "Entreprise" e
-      ${whereClause}
-    `, params);
+    // Transformation des données pour correspondre à l'ancien format
+    const entreprisesWithCount = entreprises.map(entreprise => ({
+      ...entreprise,
+      nb_demandes: entreprise.demandes.length
+    }));
 
     res.json({
       success: true,
-      data: entreprisesResult.rows,
+      data: entreprisesWithCount,
       pagination: {
-        total: parseInt(countResult.rows[0].total),
-        page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(parseInt(countResult.rows[0].total) / Number(limit))
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -540,11 +549,13 @@ router.get('/entreprises', async (req, res) => {
  */
 router.get('/regions', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM "Region" ORDER BY nom');
+    const regions = await prisma.region.findMany({
+      orderBy: { nom: 'asc' }
+    });
     
     res.json({
       success: true,
-      data: result.rows
+      data: regions
     });
   } catch (error) {
     console.error('Erreur récupération régions:', error);
@@ -561,11 +572,13 @@ router.get('/regions', async (req, res) => {
  */
 router.get('/domaines', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM "Domaine" ORDER BY nom');
+    const domaines = await prisma.domaine.findMany({
+      orderBy: { nom: 'asc' }
+    });
     
     res.json({
       success: true,
-      data: result.rows
+      data: domaines
     });
   } catch (error) {
     console.error('Erreur récupération domaines:', error);
@@ -584,27 +597,31 @@ router.get('/metiers', async (req, res) => {
   try {
     const { domaine_id } = req.query;
     
-    let whereClause = '';
-    let params: any[] = [];
-    
+    const where: any = {};
     if (domaine_id) {
-      whereClause = 'WHERE m.domaine_id = $1';
-      params.push(domaine_id);
+      where.domaineId = domaine_id as string;
     }
 
-    const result = await db.query(`
-      SELECT 
-        m.*,
-        d.nom as domaine_nom
-      FROM "Metier" m
-      LEFT JOIN "Domaine" d ON m.domaine_id = d.id
-      ${whereClause}
-      ORDER BY d.nom, m.nom
-    `, params);
+    const metiers = await prisma.metier.findMany({
+      where,
+      include: {
+        domaine: { select: { nom: true } }
+      },
+      orderBy: [
+        { domaine: { nom: 'asc' } },
+        { nom: 'asc' }
+      ]
+    });
+
+    // Transformation des données pour correspondre à l'ancien format
+    const metiersWithDomaine = metiers.map(metier => ({
+      ...metier,
+      domaine_nom: metier.domaine?.nom || null
+    }));
     
     res.json({
       success: true,
-      data: result.rows
+      data: metiersWithDomaine
     });
   } catch (error) {
     console.error('Erreur récupération métiers:', error);
