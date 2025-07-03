@@ -254,11 +254,11 @@ export default function HomePage() {
               <div className="fr-grid-row fr-grid-row--gutters">
                 <div className="fr-col-12 fr-col-md-6">
                   <p className="fr-text--lg fr-mb-4w">
-                    Notre plateforme connecte le monde de l'entreprise et l'enseignement professionnel 
-                    pour créer des opportunités d'insertion réussies pour les jeunes.
+                    Notre plateforme connecte le monde de l&apos;entreprise et l&apos;enseignement professionnel 
+                    pour créer des opportunités d&apos;insertion réussies pour les jeunes.
                   </p>
                   <p>
-                    Basée sur les données officielles du ministère de l'Éducation nationale, 
+                    Basée sur les données officielles du ministère de l&apos;Éducation nationale, 
                     elle facilite la mise en relation et le suivi des partenariats éducatifs.
                   </p>
                 </div>
@@ -267,12 +267,12 @@ export default function HomePage() {
                   <div className="fr-callout">
                     <h4 className="fr-callout__title">Fonctionnalités clés</h4>
                     <ul>
-                      <li>🤝 Mise en relation entreprises/lycées</li>
-                      <li>📋 Gestion des demandes de partenariat</li>
-                      <li>🎯 Matching automatique par secteur</li>
-                      <li>📊 Tableau de bord de suivi</li>
-                      <li>🗺️ Recherche géographique avancée</li>
-                      <li>🔐 Authentification sécurisée</li>
+                      <li> Mise en relation entreprises/lycées</li>
+                      <li> Gestion des demandes de partenariat</li>
+                      <li> Matching automatique par secteur</li>
+                      <li> Tableau de bord de suivi</li>
+                      <li> Recherche géographique avancée</li>
+                      <li> Authentification sécurisée</li>
                     </ul>
                   </div>
                 </div>

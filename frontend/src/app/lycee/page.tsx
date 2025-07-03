@@ -52,7 +52,7 @@ const LyceePage: React.FC = () => {
     if (!isAuthenticated) {
       router.push('/auth?type=lycee');
     } else if (isAuthenticated && user && user.type !== 'lycee') {
-      router.push('/dashboard');
+      router.push('/');
     } else if (isAuthenticated && user && user.type === 'lycee') {
       loadLyceeData();
     }
@@ -218,7 +218,7 @@ const LyceePage: React.FC = () => {
               <select className="fr-select" id="select-metier">
                 <option value="">Métiers du sport</option>
                 <option value="coach">Coach sportif</option>
-                <option value="professeur">Professeur d'EPS</option>
+                <option value="professeur">Professeur d&apos;EPS</option>
                 <option value="kine">Kinésithérapeute</option>
               </select>
             </div>
@@ -250,7 +250,7 @@ const LyceePage: React.FC = () => {
       case "portraits":
         return (
           <div>
-            <h3 className="fr-h3 fr-mb-4w">Portraits d'anciens élèves</h3>
+            <h3 className="fr-h3 fr-mb-4w">Portraits d anciens élèves</h3>
             <div className="fr-grid-row fr-grid-row--gutters">
               <div className="fr-col-12 fr-col-md-6">
                 <div className="fr-card fr-p-4w">

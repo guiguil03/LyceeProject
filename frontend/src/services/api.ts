@@ -149,7 +149,30 @@ export const api = {
 
   // === RECHERCHE DE LYCÉES ===
   
-  // Recherche de lycées (API externe)
+  // Recherche de lycées professionnels réels
+  async searchLyceesReels(criteria?: { commune?: string; departement?: string; region?: string; formation?: string }) {
+    try {
+      const params = new URLSearchParams();
+      if (criteria?.commune) params.append('commune', criteria.commune);
+      if (criteria?.departement) params.append('departement', criteria.departement);
+      if (criteria?.region) params.append('region', criteria.region);
+      if (criteria?.formation) params.append('formation', criteria.formation);
+
+      const response = await fetch(`${API_BASE_URL}/api/lycees/search?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Erreur lors de la recherche de lycées:', error);
+      throw error;
+    }
+  },
+
+  // Recherche de lycées (API externe - ancienne version)
   async searchLycees(criteria: SearchCriteria): Promise<LyceeData[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/lycees/search`, {
@@ -259,10 +282,7 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/api/db/demandes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': 'temp-user-id', // À remplacer par un vrai système d'auth
-        },
+        headers: getHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -288,7 +308,9 @@ export const api = {
         });
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/db/demandes?${params.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/db/demandes?${params.toString()}`, {
+        headers: getHeaders(),
+      });
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);

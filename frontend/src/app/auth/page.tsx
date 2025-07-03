@@ -31,7 +31,7 @@ export default function AuthPage() {
   // Redirection si déjà connecté
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [isAuthenticated, router]);
 
@@ -169,7 +169,7 @@ export default function AuthPage() {
             <div className="fr-input-group">
               <label className="fr-label" htmlFor="email">
                 Adresse e-mail
-                <span className="fr-hint-text">L'adresse e-mail de votre {profileType === 'entreprise' ? 'entreprise' : 'établissement'}</span>
+                <span className="fr-hint-text">L&apos;adresse e-mail de votre {profileType === 'entreprise' ? 'entreprise' : 'établissement'}</span>
               </label>
               <input
                 className="fr-input"
@@ -263,7 +263,7 @@ export default function AuthPage() {
 
                     <div className="fr-select-group">
                       <label className="fr-label" htmlFor="profil.secteur">
-                        Secteur d'activité
+                        Secteur d&apos;activité
                       </label>
                       <select
                         className="fr-select"

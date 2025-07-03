@@ -54,7 +54,7 @@ export default function ProfilLyceePage() {
     if (!isAuthenticated) {
       router.push('/auth?type=lycee');
     } else if (isAuthenticated && user && user.type !== 'lycee') {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [isAuthenticated, user, router, isLoading]);
 
