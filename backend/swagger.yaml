@@ -1,0 +1,1457 @@
+openapi: 3.0.3
+info:
+  title: LyceeProject API
+  description: |
+    API pour la plateforme de mise en relation entre lycées professionnels et entreprises.
+    
+    Cette API permet aux entreprises de créer des demandes de partenariat et aux lycées 
+    de consulter et répondre à ces demandes. Elle inclut également des fonctionnalités 
+    de matching automatique basées sur des critères géographiques et sectoriels.
+    
+    ## Authentification
+    L'API utilise l'authentification JWT (JSON Web Token). Après connexion, incluez le token 
+    dans l'en-tête Authorization: `Bearer <token>`
+    
+    ## Types d'utilisateurs
+    - **Entreprise** : Peut créer des demandes de partenariat
+    - **RBDE** (Lycée) : Peut consulter et traiter les demandes
+    
+  version: 1.0.0
+  contact:
+    name: Support LyceeProject
+    email: support@lyceeproject.fr
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3001/api
+    description: Serveur de développement
+  - url: https://api.lyceeproject.fr/api
+    description: Serveur de production
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ================================
+  # AUTHENTIFICATION
+  # ================================
+  /auth/login:
+    post:
+      tags:
+        - Authentification
+      summary: Connexion utilisateur
+      description: Permet à un utilisateur (entreprise ou lycée) de se connecter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "contact@entreprise.fr"
+                password:
+                  type: string
+                  format: password
+                  example: "motdepasse123"
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Connexion réussie"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      user:
+                        $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/register/entreprise:
+    post:
+      tags:
+        - Authentification
+      summary: Inscription entreprise
+      description: Inscription d'une nouvelle entreprise
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "contact@entreprise.fr"
+                password:
+                  type: string
+                  format: password
+                  example: "motdepasse123"
+                full_name:
+                  type: string
+                  example: "Jean Dupont"
+              required:
+                - email
+                - password
+                - full_name
+      responses:
+        '201':
+          description: Inscription réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Inscription réussie"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+
+  /auth/register/lycee:
+    post:
+      tags:
+        - Authentification
+      summary: Inscription lycée
+      description: Inscription d'un nouveau représentant de lycée (RBDE)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rbdeEmail:
+                  type: string
+                  format: email
+                  example: "rbde@lycee.ac-paris.fr"
+                password:
+                  type: string
+                  format: password
+                full_name:
+                  type: string
+                  example: "Marie Martin"
+              required:
+                - rbdeEmail
+                - password
+                - full_name
+      responses:
+        '201':
+          description: Inscription réussie
+
+  /auth/verify:
+    get:
+      tags:
+        - Authentification
+      summary: Vérification du token
+      description: Vérifie la validité du token JWT
+      responses:
+        '200':
+          description: Token valide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Token valide"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+
+  /auth/profile:
+    get:
+      tags:
+        - Authentification
+      summary: Profil utilisateur
+      description: Récupère le profil de l'utilisateur connecté
+      responses:
+        '200':
+          description: Profil récupéré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentification
+      summary: Déconnexion
+      description: Déconnecte l'utilisateur
+      responses:
+        '200':
+          description: Déconnexion réussie
+
+  # ================================
+  # DEMANDES DE PARTENARIAT
+  # ================================
+  /demandes:
+    get:
+      tags:
+        - Demandes
+      summary: Liste des demandes
+      description: Récupère la liste des demandes de partenariat avec filtres
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Numéro de page
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Nombre d'éléments par page
+        - in: query
+          name: statut
+          schema:
+            type: string
+            enum: [EN_ATTENTE, EN_COURS, TRAITE, ANNULE]
+          description: Filtrer par statut
+        - in: query
+          name: priorite
+          schema:
+            type: string
+            enum: [BASSE, NORMALE, HAUTE, URGENTE]
+          description: Filtrer par priorité
+        - in: query
+          name: entreprise_id
+          schema:
+            type: string
+          description: Filtrer par entreprise
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Recherche textuelle
+      responses:
+        '200':
+          description: Liste des demandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      demandes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Demande'
+                      total:
+                        type: integer
+                        example: 50
+                      page:
+                        type: integer
+                        example: 1
+                      totalPages:
+                        type: integer
+                        example: 5
+
+    post:
+      tags:
+        - Demandes
+      summary: Créer une demande
+      description: Créer une nouvelle demande de partenariat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entreprise_id:
+                  type: string
+                  example: "123456789"
+                  description: "ID ou SIRET de l'entreprise"
+                titre:
+                  type: string
+                  example: "Stage en développement web"
+                description:
+                  type: string
+                  example: "Recherche de stagiaires en développement web"
+                type_partenariat:
+                  type: string
+                  example: "STAGE"
+                  enum: [STAGE, APPRENTISSAGE, PROJET, INTERVENTION]
+                zone_geo:
+                  type: string
+                  example: "Île-de-France"
+                nb_places:
+                  type: integer
+                  example: 5
+                date_debut_souhaitee:
+                  type: string
+                  format: date
+                  example: "2024-03-01"
+                date_fin_souhaitee:
+                  type: string
+                  format: date
+                  example: "2024-06-30"
+                priorite:
+                  type: string
+                  enum: [BASSE, NORMALE, HAUTE, URGENTE]
+                  default: NORMALE
+                metier_id:
+                  type: string
+                  example: "uuid-metier"
+              required:
+                - entreprise_id
+                - titre
+      responses:
+        '201':
+          description: Demande créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Demande créée avec succès"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "uuid-demande"
+
+  /demandes/{id}:
+    get:
+      tags:
+        - Demandes
+      summary: Détail d'une demande
+      description: Récupère les détails d'une demande spécifique
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la demande
+      responses:
+        '200':
+          description: Détails de la demande
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DemandeDetail'
+
+    put:
+      tags:
+        - Demandes
+      summary: Modifier une demande
+      description: Modifie une demande existante
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titre:
+                  type: string
+                description:
+                  type: string
+                statut:
+                  type: string
+                  enum: [EN_ATTENTE, EN_COURS, TRAITE, ANNULE]
+                priorite:
+                  type: string
+                  enum: [BASSE, NORMALE, HAUTE, URGENTE]
+      responses:
+        '200':
+          description: Demande modifiée avec succès
+
+  /demandes/{id}/lycees:
+    post:
+      tags:
+        - Demandes
+      summary: Assigner des lycées
+      description: Assigne des lycées à une demande
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lycee_ids:
+                  type: array
+                  items:
+                    type: string
+                  example: ["uuid-lycee-1", "uuid-lycee-2"]
+                note:
+                  type: string
+                  example: "Lycées sélectionnés pour leur expertise"
+              required:
+                - lycee_ids
+      responses:
+        '200':
+          description: Lycées assignés avec succès
+
+  /demandes/{id}/actions:
+    get:
+      tags:
+        - Demandes
+      summary: Historique des actions
+      description: Récupère l'historique des actions sur une demande
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historique des actions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Action'
+
+  # ================================
+  # LYCÉES
+  # ================================
+  /lycees:
+    get:
+      tags:
+        - Lycées
+      summary: Liste des lycées
+      description: Récupère la liste des lycées avec filtres
+      parameters:
+        - in: query
+          name: region
+          schema:
+            type: string
+          description: Filtrer par région
+        - in: query
+          name: departement
+          schema:
+            type: string
+          description: Filtrer par département
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Recherche par nom
+      responses:
+        '200':
+          description: Liste des lycées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lycee'
+
+  /lycees/search:
+    get:
+      tags:
+        - Lycées
+      summary: Recherche de lycées
+      description: Recherche avancée de lycées
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Terme de recherche
+        - in: query
+          name: commune
+          schema:
+            type: string
+          description: Recherche par commune
+        - in: query
+          name: secteur
+          schema:
+            type: string
+          description: Recherche par secteur
+      responses:
+        '200':
+          description: Résultats de recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LyceeProfile'
+
+  /lycees/{uai}:
+    get:
+      tags:
+        - Lycées
+      summary: Détail d'un lycée
+      description: Récupère les détails d'un lycée par son code UAI
+      parameters:
+        - in: path
+          name: uai
+          required: true
+          schema:
+            type: string
+          description: Code UAI du lycée
+          example: "0751234A"
+      responses:
+        '200':
+          description: Détails du lycée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/LyceeProfile'
+
+  # ================================
+  # ENTREPRISES
+  # ================================
+  /entreprises:
+    get:
+      tags:
+        - Entreprises
+      summary: Liste des entreprises
+      description: Récupère la liste des entreprises
+      responses:
+        '200':
+          description: Liste des entreprises
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Entreprise'
+
+  /entreprises/search:
+    get:
+      tags:
+        - Entreprises
+      summary: Recherche d'entreprises
+      description: Recherche d'entreprises par différents critères
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Terme de recherche
+        - in: query
+          name: secteur
+          schema:
+            type: string
+          description: Secteur d'activité
+      responses:
+        '200':
+          description: Résultats de recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Entreprise'
+
+  /entreprises/{siret}:
+    get:
+      tags:
+        - Entreprises
+      summary: Détail d'une entreprise
+      description: Récupère les détails d'une entreprise par son SIRET
+      parameters:
+        - in: path
+          name: siret
+          required: true
+          schema:
+            type: string
+          description: Numéro SIRET de l'entreprise
+          example: "12345678901234"
+      responses:
+        '200':
+          description: Détails de l'entreprise
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Entreprise'
+
+  # ================================
+  # MATCHING
+  # ================================
+  /matching:
+    post:
+      tags:
+        - Matching
+      summary: Matching entreprise-lycées
+      description: Trouve les lycées compatibles avec les critères d'une entreprise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                siret:
+                  type: string
+                  example: "12345678901234"
+                secteur_activite:
+                  type: string
+                  example: "Informatique"
+                zone_geo:
+                  type: string
+                  example: "Île-de-France"
+                max_distance:
+                  type: number
+                  example: 50
+                  description: "Distance maximale en km"
+              required:
+                - siret
+      responses:
+        '200':
+          description: Lycées compatibles trouvés
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      lycees:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LyceeMatch'
+                      total:
+                        type: integer
+
+  /match/lycees:
+    post:
+      tags:
+        - Matching
+      summary: Matching pour lycées
+      description: Trouve les entreprises compatibles pour un lycée
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uai:
+                  type: string
+                  example: "0751234A"
+                formations:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Informatique", "Électronique"]
+      responses:
+        '200':
+          description: Entreprises compatibles trouvées
+
+  # ================================
+  # STATISTIQUES
+  # ================================
+  /stats/demandes:
+    get:
+      tags:
+        - Statistiques
+      summary: Statistiques des demandes
+      description: Récupère les statistiques sur les demandes de partenariat
+      parameters:
+        - in: query
+          name: entreprise_id
+          schema:
+            type: string
+          description: Filtrer par entreprise
+        - in: query
+          name: date_debut
+          schema:
+            type: string
+            format: date
+          description: Date de début pour le filtre
+        - in: query
+          name: date_fin
+          schema:
+            type: string
+            format: date
+          description: Date de fin pour le filtre
+      responses:
+        '200':
+          description: Statistiques des demandes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/StatsdemANDes'
+
+  # ================================
+  # DONNÉES DE RÉFÉRENCE
+  # ================================
+  /regions:
+    get:
+      tags:
+        - Référentiel
+      summary: Liste des régions
+      description: Récupère la liste des régions françaises
+      security: []
+      responses:
+        '200':
+          description: Liste des régions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+
+  /domaines:
+    get:
+      tags:
+        - Référentiel
+      summary: Liste des domaines
+      description: Récupère la liste des domaines de formation
+      security: []
+      responses:
+        '200':
+          description: Liste des domaines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Domaine'
+
+  /metiers:
+    get:
+      tags:
+        - Référentiel
+      summary: Liste des métiers
+      description: Récupère la liste des métiers
+      security: []
+      responses:
+        '200':
+          description: Liste des métiers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Metier'
+
+  # ================================
+  # SYNCHRONISATION
+  # ================================
+  /sync/lycees:
+    post:
+      tags:
+        - Synchronisation
+      summary: Synchroniser les lycées
+      description: Synchronise les données des lycées depuis les sources externes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                  default: false
+                  description: "Forcer la synchronisation même si les données sont récentes"
+      responses:
+        '200':
+          description: Synchronisation réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      lycees_synchronises:
+                        type: integer
+                      nouveaux_lycees:
+                        type: integer
+
+  /sync/entreprise/{siret}:
+    post:
+      tags:
+        - Synchronisation
+      summary: Synchroniser une entreprise
+      description: Synchronise les données d'une entreprise depuis l'API Sirene
+      parameters:
+        - in: path
+          name: siret
+          required: true
+          schema:
+            type: string
+          description: Numéro SIRET de l'entreprise
+      responses:
+        '200':
+          description: Synchronisation réussie
+
+  # ================================
+  # UTILITAIRES
+  # ================================
+  /health:
+    get:
+      tags:
+        - Utilitaires
+      summary: Vérification de santé
+      description: Vérifie l'état de santé de l'API
+      security: []
+      responses:
+        '200':
+          description: API opérationnelle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-user"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        full_name:
+          type: string
+          example: "Jean Dupont"
+        role:
+          type: string
+          enum: [entreprise, rbde]
+          example: "entreprise"
+        is_active:
+          type: boolean
+          example: true
+        lycee:
+          $ref: '#/components/schemas/Lycee'
+        entreprise:
+          $ref: '#/components/schemas/Entreprise'
+
+    Demande:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-demande"
+        titre:
+          type: string
+          example: "Stage en développement web"
+        description:
+          type: string
+          example: "Recherche de stagiaires en développement web"
+        type_partenariat:
+          type: string
+          enum: [STAGE, APPRENTISSAGE, PROJET, INTERVENTION]
+          example: "STAGE"
+        statut:
+          type: string
+          enum: [EN_ATTENTE, EN_COURS, TRAITE, ANNULE]
+          example: "EN_ATTENTE"
+        priorite:
+          type: string
+          enum: [BASSE, NORMALE, HAUTE, URGENTE]
+          example: "NORMALE"
+        zone_geo:
+          type: string
+          example: "Île-de-France"
+        nb_places:
+          type: integer
+          example: 5
+        date_debut_souhaitee:
+          type: string
+          format: date
+          example: "2024-03-01"
+        date_fin_souhaitee:
+          type: string
+          format: date
+          example: "2024-06-30"
+        date_creation:
+          type: string
+          format: date-time
+        date_modification:
+          type: string
+          format: date-time
+        entreprise:
+          $ref: '#/components/schemas/Entreprise'
+        metier:
+          $ref: '#/components/schemas/Metier'
+
+    DemandeDetail:
+      allOf:
+        - $ref: '#/components/schemas/Demande'
+        - type: object
+          properties:
+            lycees:
+              type: array
+              items:
+                type: object
+                properties:
+                  lycee:
+                    $ref: '#/components/schemas/Lycee'
+                  statut_traitement:
+                    type: string
+                    enum: [NOUVEAU, EN_COURS, ACCEPTE, REFUSE]
+                  score_matching:
+                    type: number
+                    format: float
+                    example: 0.85
+                  distance_km:
+                    type: number
+                    format: float
+                    example: 15.5
+                  note:
+                    type: string
+                  date_affectation:
+                    type: string
+                    format: date-time
+            actions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Action'
+
+    Lycee:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-lycee"
+        nom:
+          type: string
+          example: "Lycée Professionnel Jean Dupont"
+        numero_uai:
+          type: string
+          example: "0751234A"
+        type_etablissement:
+          type: string
+          example: "Lycée professionnel"
+        statut_public_prive:
+          type: string
+          enum: [Public, Privé]
+          example: "Public"
+        adresse:
+          type: string
+          example: "123 Rue de la République"
+        code_postal:
+          type: string
+          example: "75001"
+        commune:
+          type: string
+          example: "Paris"
+        departement:
+          type: string
+          example: "Paris"
+        region:
+          $ref: '#/components/schemas/Region'
+        latitude:
+          type: number
+          format: float
+          example: 48.8566
+        longitude:
+          type: number
+          format: float
+          example: 2.3522
+        telephone:
+          type: string
+          example: "01.23.45.67.89"
+        email:
+          type: string
+          format: email
+          example: "contact@lycee.ac-paris.fr"
+        site_web:
+          type: string
+          format: uri
+          example: "https://lycee.ac-paris.fr"
+        formations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Formation'
+
+    LyceeProfile:
+      type: object
+      properties:
+        numero_uai:
+          type: string
+          example: "0751234A"
+        nom_etablissement:
+          type: string
+          example: "Lycée Professionnel Jean Dupont"
+        libelle_commune:
+          type: string
+          example: "Paris"
+        libelle_departement:
+          type: string
+          example: "Paris"
+        libelle_region:
+          type: string
+          example: "Île-de-France"
+        adresse:
+          type: string
+          example: "123 Rue de la République"
+        code_postal:
+          type: string
+          example: "75001"
+        secteur_public_prive_libe:
+          type: string
+          example: "Public"
+        formations:
+          type: array
+          items:
+            type: string
+          example: ["Informatique", "Électronique"]
+        telephone:
+          type: string
+          example: "01.23.45.67.89"
+        mail:
+          type: string
+          format: email
+          example: "contact@lycee.ac-paris.fr"
+        web:
+          type: string
+          format: uri
+          example: "https://lycee.ac-paris.fr"
+        latitude:
+          type: number
+          format: float
+          example: 48.8566
+        longitude:
+          type: number
+          format: float
+          example: 2.3522
+
+    LyceeMatch:
+      allOf:
+        - $ref: '#/components/schemas/Lycee'
+        - type: object
+          properties:
+            score_matching:
+              type: number
+              format: float
+              example: 0.85
+              description: "Score de compatibilité (0-1)"
+            distance_km:
+              type: number
+              format: float
+              example: 15.5
+              description: "Distance en kilomètres"
+            formations_compatibles:
+              type: array
+              items:
+                type: string
+              example: ["Informatique", "Électronique"]
+
+    Entreprise:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-entreprise"
+        nom:
+          type: string
+          example: "TechCorp SAS"
+        siret:
+          type: string
+          example: "12345678901234"
+        siren:
+          type: string
+          example: "123456789"
+        secteur_activite:
+          type: string
+          example: "Informatique et télécommunications"
+        code_naf:
+          type: string
+          example: "6201Z"
+        adresse:
+          type: string
+          example: "456 Avenue des Entreprises"
+        code_postal:
+          type: string
+          example: "75002"
+        commune:
+          type: string
+          example: "Paris"
+        departement:
+          type: string
+          example: "Paris"
+        latitude:
+          type: number
+          format: float
+          example: 48.8566
+        longitude:
+          type: number
+          format: float
+          example: 2.3522
+        telephone:
+          type: string
+          example: "01.98.76.54.32"
+        email:
+          type: string
+          format: email
+          example: "contact@techcorp.fr"
+        site_web:
+          type: string
+          format: uri
+          example: "https://techcorp.fr"
+        effectif:
+          type: string
+          example: "50-99 salariés"
+
+    Formation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-formation"
+        intitule:
+          type: string
+          example: "BTS Services Informatiques aux Organisations"
+        niveau:
+          type: string
+          example: "Bac+2"
+        modalite:
+          type: string
+          example: "Formation initiale"
+        duree_mois:
+          type: integer
+          example: 24
+        description:
+          type: string
+          example: "Formation en développement d'applications"
+        domaine:
+          $ref: '#/components/schemas/Domaine'
+        metier:
+          $ref: '#/components/schemas/Metier'
+
+    Action:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-action"
+        type_action:
+          type: string
+          enum: [CREATION, MODIFICATION, AFFECTATION, STATUT_CHANGE]
+          example: "CREATION"
+        commentaire:
+          type: string
+          example: "Demande créée"
+        date_action:
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            full_name:
+              type: string
+              example: "Jean Dupont"
+            email:
+              type: string
+              format: email
+              example: "jean.dupont@example.com"
+        donnees_avant:
+          type: object
+          description: "État avant modification (JSON)"
+        donnees_apres:
+          type: object
+          description: "État après modification (JSON)"
+
+    Region:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-region"
+        nom:
+          type: string
+          example: "Île-de-France"
+
+    Domaine:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-domaine"
+        nom:
+          type: string
+          example: "Informatique et télécommunications"
+        description:
+          type: string
+          example: "Domaine des technologies de l'information"
+
+    Metier:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "uuid-metier"
+        nom:
+          type: string
+          example: "Développeur web"
+        description:
+          type: string
+          example: "Développement d'applications web"
+        domaine:
+          $ref: '#/components/schemas/Domaine'
+
+    StatsdemANDes:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 150
+        en_attente:
+          type: integer
+          example: 45
+        en_cours:
+          type: integer
+          example: 30
+        traite:
+          type: integer
+          example: 70
+        annule:
+          type: integer
+          example: 5
+        par_mois:
+          type: array
+          items:
+            type: object
+            properties:
+              mois:
+                type: string
+                example: "2024-01"
+              count:
+                type: integer
+                example: 12
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Erreur de validation"
+        message:
+          type: string
+          example: "Le champ email est requis"
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Données invalides"
+            message: "Le champ email est requis"
+
+    Unauthorized:
+      description: Non autorisé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Accès non autorisé"
+            message: "Token JWT invalide ou manquant"
+
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Ressource non trouvée"
+            message: "L'élément demandé n'existe pas"
+
+    InternalServerError:
+      description: Erreur interne du serveur
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Erreur interne"
+            message: "Une erreur inattendue s'est produite"
+
+tags:
+  - name: Authentification
+    description: Gestion de l'authentification et des utilisateurs
+  - name: Demandes
+    description: Gestion des demandes de partenariat
+  - name: Lycées
+    description: Gestion des lycées professionnels
+  - name: Entreprises
+    description: Gestion des entreprises
+  - name: Matching
+    description: Algorithmes de mise en relation
+  - name: Statistiques
+    description: Statistiques et rapports
+  - name: Référentiel
+    description: Données de référence (régions, domaines, métiers)
+  - name: Synchronisation
+    description: Synchronisation avec les sources externes
+  - name: Utilitaires
+    description: Outils et vérifications système 
