@@ -4,7 +4,8 @@ import ClientLayout from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
   title: "LycéeConnect - Plateforme de mise en relation lycées-entreprises",
-  description: "Trouvez les lycées professionnels qui correspondent à vos besoins en alternance et stages",
+  description:
+    "Trouvez les lycées professionnels qui correspondent à vos besoins en alternance et stages",
 };
 
 export default function RootLayout({
@@ -18,13 +19,22 @@ export default function RootLayout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700;800&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css"
+          rel="stylesheet"
+        />
       </head>
       <body>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        <ClientLayout>{children}</ClientLayout>
 
         {/* Scripts DSFR */}
         <script

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { usePathname } from 'next/navigation';
-import Navbar from './Navbar';
-import CompactQuickActions from './CompactQuickActions';
+import React from "react";
+import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+import { usePathname } from "next/navigation";
+import Navbar from "./Navbar";
+import CompactQuickActions from "./CompactQuickActions";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -21,7 +21,10 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         <div className="fr-grid-row fr-grid-row--center">
           <div className="fr-col-12 fr-col-md-6">
             <div className="fr-text--center">
-              <span className="fr-icon-refresh-line fr-icon--lg" aria-hidden="true"></span>
+              <span
+                className="fr-icon-refresh-line fr-icon--lg"
+                aria-hidden="true"
+              ></span>
               <p>Chargement...</p>
             </div>
           </div>
@@ -56,8 +59,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 </div>
               </div>
               <div className="fr-header__tools">
-                <Navbar 
-                  isAuthenticated={isAuthenticated} 
+                <Navbar
+                  isAuthenticated={isAuthenticated}
                   userType={user?.type}
                 />
               </div>
@@ -67,11 +70,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       </header>
 
       {/* Actions rapides pour utilisateurs connectés (sauf page d'accueil) */}
-      {isAuthenticated && pathname !== '/' && <CompactQuickActions />}
+      {isAuthenticated && pathname !== "/" && <CompactQuickActions />}
 
-      <main role="main">
-        {children}
-      </main>
+      <main role="main">{children}</main>
 
       <footer className="fr-footer" role="contentinfo">
         <div className="fr-container">
@@ -87,17 +88,24 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             </div>
             <div className="fr-footer__content">
               <p className="fr-footer__content-desc">
-                LycéeConnect facilite les partenariats entre lycées professionnels et entreprises 
-                pour l'insertion professionnelle des jeunes.
+                LycéeConnect facilite les partenariats entre lycées
+                professionnels et entreprises pour l'insertion professionnelle
+                des jeunes.
               </p>
               <ul className="fr-footer__content-list">
                 <li className="fr-footer__content-item">
-                  <a className="fr-footer__content-link" href="/mentions-legales">
+                  <a
+                    className="fr-footer__content-link"
+                    href="/mentions-legales"
+                  >
                     Mentions légales
                   </a>
                 </li>
                 <li className="fr-footer__content-item">
-                  <a className="fr-footer__content-link" href="/donnees-personnelles">
+                  <a
+                    className="fr-footer__content-link"
+                    href="/donnees-personnelles"
+                  >
                     Données personnelles
                   </a>
                 </li>
@@ -113,7 +121,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             <ul className="fr-footer__bottom-list">
               <li className="fr-footer__bottom-item">
                 <span className="fr-footer__bottom-link">
-                  © République Française 2024
+                  © République Française 2025
                 </span>
               </li>
             </ul>
@@ -122,4 +130,4 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       </footer>
     </>
   );
-} 
+}

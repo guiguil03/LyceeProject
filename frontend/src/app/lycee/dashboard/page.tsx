@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Formation {
   id: string;
@@ -17,163 +18,231 @@ interface PlateauTechnique {
 }
 
 export default function LyceeDashboard() {
-  const [activeTab, setActiveTab] = useState('informations');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState("informations");
   const [lyceeData, setLyceeData] = useState({
-    nom: 'Lycée professionnel Pierre Mendès France',
-    adresse: '88 Rue de Paris, 59000 Lille',
-    telephone: '03 20 55 66 77',
-    email: 'contact@mendes-france-lille.fr',
-    siteWeb: 'https://mendes-france-lille.fr',
-    description: 'Lycée spécialisé dans les métiers du commerce et de l\'industrie',
+    nom: "Lycée professionnel Pierre Mendès France",
+    adresse: "88 Rue de Paris, 59000 Lille",
+    telephone: "03 20 55 66 77",
+    email: "contact@mendes-france-lille.fr",
+    siteWeb: "https://mendes-france-lille.fr",
+    description:
+      "Lycée spécialisé dans les métiers du commerce et de l'industrie",
     effectifs: {
       eleves: 850,
       apprentis: 120,
-      enseignants: 65
-    }
+      enseignants: 65,
+    },
   });
 
   const [formations, setFormations] = useState<Formation[]>([
     {
-      id: '1',
-      intitule: 'Bac Pro Commerce',
-      domaine: 'Commerce et vente',
-      metier: 'Vendeur conseil',
-      modalite: 'Alternance'
+      id: "1",
+      intitule: "Bac Pro Commerce",
+      domaine: "Commerce et vente",
+      metier: "Vendeur conseil",
+      modalite: "Alternance",
     },
     {
-      id: '2',
-      intitule: 'Bac Pro Maintenance des équipements industriels',
-      domaine: 'Industrie et production',
-      metier: 'Technicien de maintenance',
-      modalite: 'Alternance'
-    }
+      id: "2",
+      intitule: "Bac Pro Maintenance des équipements industriels",
+      domaine: "Industrie et production",
+      metier: "Technicien de maintenance",
+      modalite: "Alternance",
+    },
   ]);
 
-  const [plateauxTechniques, setPlateauxTechniques] = useState<PlateauTechnique[]>([
+  const [plateauxTechniques, setPlateauxTechniques] = useState<
+    PlateauTechnique[]
+  >([
     {
-      id: '1',
-      nom: 'Magasin pédagogique',
-      description: 'Espace de vente reconstitué avec caisse et linéaires pour la formation commerce'
-    }
+      id: "1",
+      nom: "Magasin pédagogique",
+      description:
+        "Espace de vente reconstitué avec caisse et linéaires pour la formation commerce",
+    },
   ]);
 
   const [newFormation, setNewFormation] = useState<Partial<Formation>>({});
   const [newPlateau, setNewPlateau] = useState<Partial<PlateauTechnique>>({});
 
   const tabs = [
-    { id: 'informations', label: 'Informations générales', icon: 'fr-icon-information-line' },
-    { id: 'formations', label: 'Nos formations', icon: 'fr-icon-book-2-line' },
-    { id: 'plateaux', label: 'Plateaux techniques', icon: 'fr-icon-tools-line' },
-    { id: 'demandes', label: 'Demandes d\'entreprises', icon: 'fr-icon-mail-line' },
-    { id: 'statistiques', label: 'Statistiques', icon: 'fr-icon-bar-chart-line' }
+    {
+      id: "informations",
+      label: "Informations générales",
+      icon: "fr-icon-information-line",
+    },
+    { id: "formations", label: "Nos formations", icon: "fr-icon-todo-line" },
+    {
+      id: "plateaux",
+      label: "Plateaux techniques",
+      icon: "fr-icon-tools-line",
+    },
+    {
+      id: "demandes",
+      label: "Demandes d'entreprises",
+      icon: "fr-icon-mail-line",
+    },
+    {
+      id: "statistiques",
+      label: "Statistiques",
+      icon: "fr-icon-bar-chart-line",
+    },
   ];
+
+  // Lire le paramètre URL pour sélectionner l'onglet
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (
+      tabParam &&
+      [
+        "informations",
+        "formations",
+        "plateaux",
+        "demandes",
+        "statistiques",
+      ].includes(tabParam)
+    ) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const handleAddFormation = () => {
     if (newFormation.intitule && newFormation.domaine) {
-      setFormations([...formations, {
-        id: Date.now().toString(),
-        intitule: newFormation.intitule || '',
-        domaine: newFormation.domaine || '',
-        metier: newFormation.metier || '',
-        modalite: newFormation.modalite || 'Alternance'
-      }]);
+      setFormations([
+        ...formations,
+        {
+          id: Date.now().toString(),
+          intitule: newFormation.intitule || "",
+          domaine: newFormation.domaine || "",
+          metier: newFormation.metier || "",
+          modalite: newFormation.modalite || "Alternance",
+        },
+      ]);
       setNewFormation({});
     }
   };
 
   const handleAddPlateau = () => {
     if (newPlateau.nom && newPlateau.description) {
-      setPlateauxTechniques([...plateauxTechniques, {
-        id: Date.now().toString(),
-        nom: newPlateau.nom || '',
-        description: newPlateau.description || ''
-      }]);
+      setPlateauxTechniques([
+        ...plateauxTechniques,
+        {
+          id: Date.now().toString(),
+          nom: newPlateau.nom || "",
+          description: newPlateau.description || "",
+        },
+      ]);
       setNewPlateau({});
     }
   };
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'informations':
+      case "informations":
         return (
           <div className="fr-container">
             <h3 className="fr-h3 fr-mb-4w">Informations de l'établissement</h3>
-            
+
             <div className="fr-grid-row fr-grid-row--gutters">
               <div className="fr-col-12 fr-col-md-6">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="nom">Nom de l'établissement</label>
+                  <label className="fr-label" htmlFor="nom">
+                    Nom de l'établissement
+                  </label>
                   <input
                     className="fr-input"
                     type="text"
                     id="nom"
                     value={lyceeData.nom}
-                    onChange={(e) => setLyceeData({...lyceeData, nom: e.target.value})}
+                    onChange={(e) =>
+                      setLyceeData({ ...lyceeData, nom: e.target.value })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-6">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="telephone">Téléphone</label>
+                  <label className="fr-label" htmlFor="telephone">
+                    Téléphone
+                  </label>
                   <input
                     className="fr-input"
                     type="tel"
                     id="telephone"
                     value={lyceeData.telephone}
-                    onChange={(e) => setLyceeData({...lyceeData, telephone: e.target.value})}
+                    onChange={(e) =>
+                      setLyceeData({ ...lyceeData, telephone: e.target.value })
+                    }
                   />
                 </div>
               </div>
             </div>
 
             <div className="fr-input-group">
-              <label className="fr-label" htmlFor="adresse">Adresse complète</label>
+              <label className="fr-label" htmlFor="adresse">
+                Adresse complète
+              </label>
               <textarea
                 className="fr-input"
                 id="adresse"
                 rows={3}
                 value={lyceeData.adresse}
-                onChange={(e) => setLyceeData({...lyceeData, adresse: e.target.value})}
+                onChange={(e) =>
+                  setLyceeData({ ...lyceeData, adresse: e.target.value })
+                }
               />
             </div>
 
             <div className="fr-grid-row fr-grid-row--gutters">
               <div className="fr-col-12 fr-col-md-6">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="email">Email de contact</label>
+                  <label className="fr-label" htmlFor="email">
+                    Email de contact
+                  </label>
                   <input
                     className="fr-input"
                     type="email"
                     id="email"
                     value={lyceeData.email}
-                    onChange={(e) => setLyceeData({...lyceeData, email: e.target.value})}
+                    onChange={(e) =>
+                      setLyceeData({ ...lyceeData, email: e.target.value })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-6">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="siteWeb">Site web</label>
+                  <label className="fr-label" htmlFor="siteWeb">
+                    Site web
+                  </label>
                   <input
                     className="fr-input"
                     type="url"
                     id="siteWeb"
                     value={lyceeData.siteWeb}
-                    onChange={(e) => setLyceeData({...lyceeData, siteWeb: e.target.value})}
+                    onChange={(e) =>
+                      setLyceeData({ ...lyceeData, siteWeb: e.target.value })
+                    }
                   />
                 </div>
               </div>
             </div>
 
             <div className="fr-input-group">
-              <label className="fr-label" htmlFor="description">Description de l'établissement</label>
+              <label className="fr-label" htmlFor="description">
+                Description de l'établissement
+              </label>
               <textarea
                 className="fr-input"
                 id="description"
                 rows={4}
                 value={lyceeData.description}
-                onChange={(e) => setLyceeData({...lyceeData, description: e.target.value})}
+                onChange={(e) =>
+                  setLyceeData({ ...lyceeData, description: e.target.value })
+                }
                 placeholder="Présentez votre lycée, ses spécialités, ses atouts..."
               />
             </div>
@@ -182,62 +251,81 @@ export default function LyceeDashboard() {
             <div className="fr-grid-row fr-grid-row--gutters">
               <div className="fr-col-12 fr-col-md-4">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="eleves">Nombre d'élèves</label>
+                  <label className="fr-label" htmlFor="eleves">
+                    Nombre d'élèves
+                  </label>
                   <input
                     className="fr-input"
                     type="number"
                     id="eleves"
                     value={lyceeData.effectifs.eleves}
-                    onChange={(e) => setLyceeData({
-                      ...lyceeData, 
-                      effectifs: {...lyceeData.effectifs, eleves: parseInt(e.target.value)}
-                    })}
+                    onChange={(e) =>
+                      setLyceeData({
+                        ...lyceeData,
+                        effectifs: {
+                          ...lyceeData.effectifs,
+                          eleves: parseInt(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-4">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="apprentis">Nombre d'apprentis</label>
+                  <label className="fr-label" htmlFor="apprentis">
+                    Nombre d'apprentis
+                  </label>
                   <input
                     className="fr-input"
                     type="number"
                     id="apprentis"
                     value={lyceeData.effectifs.apprentis}
-                    onChange={(e) => setLyceeData({
-                      ...lyceeData, 
-                      effectifs: {...lyceeData.effectifs, apprentis: parseInt(e.target.value)}
-                    })}
+                    onChange={(e) =>
+                      setLyceeData({
+                        ...lyceeData,
+                        effectifs: {
+                          ...lyceeData.effectifs,
+                          apprentis: parseInt(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-4">
                 <div className="fr-input-group">
-                  <label className="fr-label" htmlFor="enseignants">Nombre d'enseignants</label>
+                  <label className="fr-label" htmlFor="enseignants">
+                    Nombre d'enseignants
+                  </label>
                   <input
                     className="fr-input"
                     type="number"
                     id="enseignants"
                     value={lyceeData.effectifs.enseignants}
-                    onChange={(e) => setLyceeData({
-                      ...lyceeData, 
-                      effectifs: {...lyceeData.effectifs, enseignants: parseInt(e.target.value)}
-                    })}
+                    onChange={(e) =>
+                      setLyceeData({
+                        ...lyceeData,
+                        effectifs: {
+                          ...lyceeData.effectifs,
+                          enseignants: parseInt(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
               </div>
             </div>
 
             <div className="fr-btns-group fr-btns-group--right fr-mt-6w">
-              <button className="fr-btn">
-                Sauvegarder les informations
-              </button>
+              <button className="fr-btn">Sauvegarder les informations</button>
             </div>
           </div>
         );
 
-      case 'formations':
+      case "formations":
         return (
           <div className="fr-container">
             <div className="fr-grid-row fr-grid-row--gutters fr-mb-6w">
@@ -248,9 +336,13 @@ export default function LyceeDashboard() {
                 </p>
               </div>
               <div className="fr-col-12 fr-col-md-4 fr-text--right">
-                <button 
+                <button
                   className="fr-btn fr-btn--icon-left fr-icon-add-line"
-                  onClick={() => document.getElementById('add-formation-modal')?.setAttribute('aria-hidden', 'false')}
+                  onClick={() =>
+                    document
+                      .getElementById("add-formation-modal")
+                      ?.setAttribute("aria-hidden", "false")
+                  }
                 >
                   Ajouter une formation
                 </button>
@@ -260,14 +352,19 @@ export default function LyceeDashboard() {
             {/* Liste des formations */}
             <div className="fr-grid-row fr-grid-row--gutters">
               {formations.map((formation) => (
-                <div key={formation.id} className="fr-col-12 fr-col-md-6 fr-col-lg-4">
+                <div
+                  key={formation.id}
+                  className="fr-col-12 fr-col-md-6 fr-col-lg-4"
+                >
                   <div className="fr-card fr-card--no-arrow">
                     <div className="fr-card__body">
                       <div className="fr-card__content">
                         <h4 className="fr-card__title">{formation.intitule}</h4>
                         <p className="fr-card__desc">
-                          <strong>Domaine :</strong> {formation.domaine}<br/>
-                          <strong>Métier :</strong> {formation.metier}<br/>
+                          <strong>Domaine :</strong> {formation.domaine}
+                          <br />
+                          <strong>Métier :</strong> {formation.metier}
+                          <br />
                           <strong>Modalité :</strong> {formation.modalite}
                         </p>
                         <div className="fr-btns-group fr-btns-group--sm">
@@ -286,100 +383,161 @@ export default function LyceeDashboard() {
             </div>
 
             {/* Modal d'ajout de formation */}
-            <dialog id="add-formation-modal" className="fr-modal" aria-labelledby="add-formation-modal-title">
+            <dialog
+              id="add-formation-modal"
+              className="fr-modal"
+              aria-labelledby="add-formation-modal-title"
+            >
               <div className="fr-container fr-container--fluid fr-container-md">
                 <div className="fr-grid-row fr-grid-row--center">
                   <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
                     <div className="fr-modal__body">
                       <div className="fr-modal__header">
-                        <button 
-                          className="fr-btn--close fr-btn" 
+                        <button
+                          className="fr-btn--close fr-btn"
                           title="Fermer"
-                          onClick={() => document.getElementById('add-formation-modal')?.setAttribute('aria-hidden', 'true')}
+                          onClick={() =>
+                            document
+                              .getElementById("add-formation-modal")
+                              ?.setAttribute("aria-hidden", "true")
+                          }
                         >
                           Fermer
                         </button>
                       </div>
                       <div className="fr-modal__content">
-                        <h1 id="add-formation-modal-title" className="fr-modal__title">
+                        <h1
+                          id="add-formation-modal-title"
+                          className="fr-modal__title"
+                        >
                           Ajouter une formation
                         </h1>
-                        
+
                         <div className="fr-input-group">
-                          <label className="fr-label" htmlFor="new-formation-intitule">
+                          <label
+                            className="fr-label"
+                            htmlFor="new-formation-intitule"
+                          >
                             Intitulé de la formation
                           </label>
                           <input
                             className="fr-input"
                             type="text"
                             id="new-formation-intitule"
-                            value={newFormation.intitule || ''}
-                            onChange={(e) => setNewFormation({...newFormation, intitule: e.target.value})}
+                            value={newFormation.intitule || ""}
+                            onChange={(e) =>
+                              setNewFormation({
+                                ...newFormation,
+                                intitule: e.target.value,
+                              })
+                            }
                             placeholder="Ex: Bac Pro Commerce"
                           />
                         </div>
 
                         <div className="fr-input-group">
-                          <label className="fr-label" htmlFor="new-formation-domaine">
+                          <label
+                            className="fr-label"
+                            htmlFor="new-formation-domaine"
+                          >
                             Domaine d'activité
                           </label>
                           <select
                             className="fr-select"
                             id="new-formation-domaine"
-                            value={newFormation.domaine || ''}
-                            onChange={(e) => setNewFormation({...newFormation, domaine: e.target.value})}
+                            value={newFormation.domaine || ""}
+                            onChange={(e) =>
+                              setNewFormation({
+                                ...newFormation,
+                                domaine: e.target.value,
+                              })
+                            }
                           >
                             <option value="">Sélectionnez un domaine</option>
-                            <option value="Commerce et vente">Commerce et vente</option>
-                            <option value="Industrie et production">Industrie et production</option>
-                            <option value="Informatique et numérique">Informatique et numérique</option>
-                            <option value="Bâtiment et travaux publics">Bâtiment et travaux publics</option>
-                            <option value="Restauration et hôtellerie">Restauration et hôtellerie</option>
+                            <option value="Commerce et vente">
+                              Commerce et vente
+                            </option>
+                            <option value="Industrie et production">
+                              Industrie et production
+                            </option>
+                            <option value="Informatique et numérique">
+                              Informatique et numérique
+                            </option>
+                            <option value="Bâtiment et travaux publics">
+                              Bâtiment et travaux publics
+                            </option>
+                            <option value="Restauration et hôtellerie">
+                              Restauration et hôtellerie
+                            </option>
                           </select>
                         </div>
 
                         <div className="fr-input-group">
-                          <label className="fr-label" htmlFor="new-formation-metier">
+                          <label
+                            className="fr-label"
+                            htmlFor="new-formation-metier"
+                          >
                             Métier visé
                           </label>
                           <input
                             className="fr-input"
                             type="text"
                             id="new-formation-metier"
-                            value={newFormation.metier || ''}
-                            onChange={(e) => setNewFormation({...newFormation, metier: e.target.value})}
+                            value={newFormation.metier || ""}
+                            onChange={(e) =>
+                              setNewFormation({
+                                ...newFormation,
+                                metier: e.target.value,
+                              })
+                            }
                             placeholder="Ex: Vendeur conseil"
                           />
                         </div>
 
                         <div className="fr-input-group">
-                          <label className="fr-label" htmlFor="new-formation-modalite">
+                          <label
+                            className="fr-label"
+                            htmlFor="new-formation-modalite"
+                          >
                             Modalité
                           </label>
                           <select
                             className="fr-select"
                             id="new-formation-modalite"
-                            value={newFormation.modalite || 'Alternance'}
-                            onChange={(e) => setNewFormation({...newFormation, modalite: e.target.value})}
+                            value={newFormation.modalite || "Alternance"}
+                            onChange={(e) =>
+                              setNewFormation({
+                                ...newFormation,
+                                modalite: e.target.value,
+                              })
+                            }
                           >
                             <option value="Alternance">Alternance</option>
                             <option value="Stage">Stage</option>
-                            <option value="Formation continue">Formation continue</option>
+                            <option value="Formation continue">
+                              Formation continue
+                            </option>
                           </select>
                         </div>
 
                         <div className="fr-btns-group fr-btns-group--right fr-mt-4w">
-                          <button 
+                          <button
                             className="fr-btn fr-btn--secondary"
-                            onClick={() => document.getElementById('add-formation-modal')?.setAttribute('aria-hidden', 'true')}
+                            onClick={() =>
+                              document
+                                .getElementById("add-formation-modal")
+                                ?.setAttribute("aria-hidden", "true")
+                            }
                           >
                             Annuler
                           </button>
-                          <button 
+                          <button
                             className="fr-btn"
                             onClick={() => {
                               handleAddFormation();
-                              document.getElementById('add-formation-modal')?.setAttribute('aria-hidden', 'true');
+                              document
+                                .getElementById("add-formation-modal")
+                                ?.setAttribute("aria-hidden", "true");
                             }}
                           >
                             Ajouter
@@ -394,7 +552,7 @@ export default function LyceeDashboard() {
           </div>
         );
 
-      case 'plateaux':
+      case "plateaux":
         return (
           <div className="fr-container">
             <div className="fr-grid-row fr-grid-row--gutters fr-mb-6w">
@@ -418,7 +576,10 @@ export default function LyceeDashboard() {
                     <div className="fr-card__body">
                       <div className="fr-card__content">
                         <h4 className="fr-card__title">
-                          <span className="fr-icon-tools-line fr-mr-1w" aria-hidden="true"></span>
+                          <span
+                            className="fr-icon-tools-line fr-mr-1w"
+                            aria-hidden="true"
+                          ></span>
                           {plateau.nom}
                         </h4>
                         <p className="fr-card__desc">{plateau.description}</p>
@@ -439,13 +600,16 @@ export default function LyceeDashboard() {
           </div>
         );
 
-      case 'demandes':
+      case "demandes":
         return (
           <div className="fr-container">
             <h3 className="fr-h3 fr-mb-4w">Demandes d'entreprises</h3>
-            
+
             <div className="fr-alert fr-alert--info fr-mb-4w">
-              <p>Vous avez <strong>3 nouvelles demandes</strong> d'entreprises à traiter.</p>
+              <p>
+                Vous avez <strong>3 nouvelles demandes</strong> d'entreprises à
+                traiter.
+              </p>
             </div>
 
             <div className="fr-table fr-table--bordered">
@@ -464,11 +628,15 @@ export default function LyceeDashboard() {
                     <td>TechSolutions SARL</td>
                     <td>Développeur web</td>
                     <td>02/07/2025</td>
-                    <td><span className="fr-badge fr-badge--new">Nouveau</span></td>
+                    <td>
+                      <span className="fr-badge fr-badge--new">Nouveau</span>
+                    </td>
                     <td>
                       <div className="fr-btns-group fr-btns-group--sm">
                         <button className="fr-btn fr-btn--sm">Répondre</button>
-                        <button className="fr-btn fr-btn--secondary fr-btn--sm">Voir détails</button>
+                        <button className="fr-btn fr-btn--secondary fr-btn--sm">
+                          Voir détails
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -476,11 +644,15 @@ export default function LyceeDashboard() {
                     <td>BatiPro SAS</td>
                     <td>Électricien</td>
                     <td>01/07/2025</td>
-                    <td><span className="fr-badge fr-badge--info">En cours</span></td>
+                    <td>
+                      <span className="fr-badge fr-badge--info">En cours</span>
+                    </td>
                     <td>
                       <div className="fr-btns-group fr-btns-group--sm">
                         <button className="fr-btn fr-btn--sm">Répondre</button>
-                        <button className="fr-btn fr-btn--secondary fr-btn--sm">Voir détails</button>
+                        <button className="fr-btn fr-btn--secondary fr-btn--sm">
+                          Voir détails
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -490,73 +662,89 @@ export default function LyceeDashboard() {
           </div>
         );
 
-      case 'statistiques':
+      case "statistiques":
         return (
           <div className="fr-container">
             <h3 className="fr-h3 fr-mb-4w">Statistiques de l'établissement</h3>
-            
+
             <div className="fr-grid-row fr-grid-row--gutters fr-mb-6w">
               <div className="fr-col-12 fr-col-md-3">
                 <div className="fr-card fr-card--no-arrow">
                   <div className="fr-card__body">
                     <div className="fr-card__content">
                       <h4 className="fr-card__title">
-                        <span className="fr-icon-user-line fr-mr-1w" aria-hidden="true"></span>
+                        <span
+                          className="fr-icon-user-line fr-mr-1w"
+                          aria-hidden="true"
+                        ></span>
                         Demandes reçues
                       </h4>
                       <p className="fr-card__desc">
-                        <span className="fr-text--xl fr-text--bold">12</span><br/>
+                        <span className="fr-text--xl fr-text--bold">12</span>
+                        <br />
                         Ce mois-ci
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-3">
                 <div className="fr-card fr-card--no-arrow">
                   <div className="fr-card__body">
                     <div className="fr-card__content">
                       <h4 className="fr-card__title">
-                        <span className="fr-icon-check-line fr-mr-1w" aria-hidden="true"></span>
+                        <span
+                          className="fr-icon-check-line fr-mr-1w"
+                          aria-hidden="true"
+                        ></span>
                         Taux d'acceptation
                       </h4>
                       <p className="fr-card__desc">
-                        <span className="fr-text--xl fr-text--bold">75%</span><br/>
+                        <span className="fr-text--xl fr-text--bold">75%</span>
+                        <br />
                         Moyenne mensuelle
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-3">
                 <div className="fr-card fr-card--no-arrow">
                   <div className="fr-card__body">
                     <div className="fr-card__content">
                       <h4 className="fr-card__title">
-                        <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
+                        <span
+                          className="fr-icon-building-line fr-mr-1w"
+                          aria-hidden="true"
+                        ></span>
                         Entreprises partenaires
                       </h4>
                       <p className="fr-card__desc">
-                        <span className="fr-text--xl fr-text--bold">28</span><br/>
+                        <span className="fr-text--xl fr-text--bold">28</span>
+                        <br />
                         Actives
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="fr-col-12 fr-col-md-3">
                 <div className="fr-card fr-card--no-arrow">
                   <div className="fr-card__body">
                     <div className="fr-card__content">
                       <h4 className="fr-card__title">
-                        <span className="fr-icon-time-line fr-mr-1w" aria-hidden="true"></span>
+                        <span
+                          className="fr-icon-time-line fr-mr-1w"
+                          aria-hidden="true"
+                        ></span>
                         Temps de réponse
                       </h4>
                       <p className="fr-card__desc">
-                        <span className="fr-text--xl fr-text--bold">2.5j</span><br/>
+                        <span className="fr-text--xl fr-text--bold">2.5j</span>
+                        <br />
                         Moyenne
                       </p>
                     </div>
@@ -568,8 +756,9 @@ export default function LyceeDashboard() {
             <div className="fr-callout">
               <h4 className="fr-callout__title">Conseil</h4>
               <p>
-                Pour améliorer votre visibilité, pensez à mettre à jour régulièrement 
-                vos informations et à répondre rapidement aux demandes d'entreprises.
+                Pour améliorer votre visibilité, pensez à mettre à jour
+                régulièrement vos informations et à répondre rapidement aux
+                demandes d'entreprises.
               </p>
             </div>
           </div>
@@ -587,7 +776,10 @@ export default function LyceeDashboard() {
         <div className="fr-grid-row fr-grid-row--gutters fr-grid-row--middle">
           <div className="fr-col-12 fr-col-md-8">
             <h1 className="fr-h1 fr-mb-2w">
-              <span className="fr-icon-school-line fr-mr-2w" aria-hidden="true"></span>
+              <span
+                className="fr-icon-school-line fr-mr-2w"
+                aria-hidden="true"
+              ></span>
               Dashboard Lycée
             </h1>
             <p className="fr-text--lead fr-mb-0">
@@ -609,14 +801,19 @@ export default function LyceeDashboard() {
             {tabs.map((tab) => (
               <li key={tab.id} role="presentation">
                 <button
-                  className={`fr-tabs__tab ${activeTab === tab.id ? 'fr-tabs__tab--selected' : ''}`}
+                  className={`fr-tabs__tab ${
+                    activeTab === tab.id ? "fr-tabs__tab--selected" : ""
+                  }`}
                   id={`tabpanel-${tab.id}`}
                   type="button"
                   role="tab"
                   aria-selected={activeTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <span className={`${tab.icon} fr-mr-1w`} aria-hidden="true"></span>
+                  <span
+                    className={`${tab.icon} fr-mr-1w`}
+                    aria-hidden="true"
+                  ></span>
                   {tab.label}
                 </button>
               </li>
@@ -631,4 +828,4 @@ export default function LyceeDashboard() {
       </div>
     </div>
   );
-} 
+}
