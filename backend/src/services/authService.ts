@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Pool } from 'pg';
-import pool from '../config/database';
+import PrismaService from './prismaService';
+
+const prisma = PrismaService.getInstance().getClient();
 
 // Interfaces simplifiées basées sur la table User
 export interface User {
@@ -68,12 +69,11 @@ export const registerUser = async (userData: RegisterUserData): Promise<AuthResp
     console.log('🔄 Début de l\'inscription utilisateur:', { email: userData.email, role: userData.role });
 
     // Vérifier si l'email existe déjà
-    const existingUser = await pool.query(
-      'SELECT id FROM "User" WHERE email = $1',
-      [userData.email]
-    );
+    const existingUser = await prisma.user.findUnique({
+      where: { email: userData.email }
+    });
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       throw new Error('Cet email est déjà utilisé');
     }
 
@@ -85,21 +85,17 @@ export const registerUser = async (userData: RegisterUserData): Promise<AuthResp
     // Hasher le mot de passe
     const passwordHash = await hashPassword(userData.password);
 
-    // Insérer le nouvel utilisateur
-    const result = await pool.query(
-      `INSERT INTO "User" (email, password_hash, role, full_name, lycee_id)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, role, full_name, lycee_id, created_at`,
-      [
-        userData.email,
+    // Créer le nouvel utilisateur
+    const newUser = await prisma.user.create({
+      data: {
+        email: userData.email,
         passwordHash,
-        userData.role,
-        userData.full_name || null,
-        userData.lycee_id || null
-      ]
-    );
+        role: userData.role.toUpperCase() as any,
+        fullName: userData.full_name || null,
+        lyceeId: userData.lycee_id || null
+      }
+    });
 
-    const newUser = result.rows[0];
     console.log('✅ Utilisateur créé avec succès:', { id: newUser.id, email: newUser.email, role: newUser.role });
 
     // Générer le token
@@ -112,10 +108,10 @@ export const registerUser = async (userData: RegisterUserData): Promise<AuthResp
         user: {
           id: newUser.id,
           email: newUser.email,
-          role: newUser.role,
-          full_name: newUser.full_name,
-          lycee_id: newUser.lycee_id,
-          created_at: newUser.created_at
+          role: newUser.role.toLowerCase() as any,
+          full_name: newUser.fullName || undefined,
+          lycee_id: newUser.lyceeId || undefined,
+          created_at: newUser.createdAt?.toISOString() || new Date().toISOString()
         },
         token
       }
@@ -133,19 +129,16 @@ export const loginUser = async (loginData: LoginData): Promise<AuthResponse> => 
     console.log('🔄 Tentative de connexion pour:', loginData.email);
 
     // Récupérer l'utilisateur
-    const result = await pool.query(
-      'SELECT id, email, password_hash, role, full_name, lycee_id, created_at FROM "User" WHERE email = $1',
-      [loginData.email]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email: loginData.email }
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       throw new Error('Email ou mot de passe incorrect');
     }
 
-    const user = result.rows[0];
-
     // Vérifier le mot de passe
-    const isValidPassword = await verifyPassword(loginData.password, user.password_hash);
+    const isValidPassword = await verifyPassword(loginData.password, user.passwordHash);
     if (!isValidPassword) {
       throw new Error('Email ou mot de passe incorrect');
     }
@@ -162,10 +155,10 @@ export const loginUser = async (loginData: LoginData): Promise<AuthResponse> => 
         user: {
           id: user.id,
           email: user.email,
-          role: user.role,
-          full_name: user.full_name,
-          lycee_id: user.lycee_id,
-          created_at: user.created_at
+          role: user.role.toLowerCase() as any,
+          full_name: user.fullName || undefined,
+          lycee_id: user.lyceeId || undefined,
+          created_at: user.createdAt?.toISOString() || new Date().toISOString()
         },
         token
       }
@@ -180,16 +173,22 @@ export const loginUser = async (loginData: LoginData): Promise<AuthResponse> => 
 // Récupérer un utilisateur par ID
 export const getUserById = async (userId: string): Promise<User | null> => {
   try {
-    const result = await pool.query(
-      'SELECT id, email, role, full_name, lycee_id, created_at FROM "User" WHERE id = $1',
-      [userId]
-    );
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return null;
     }
 
-    return result.rows[0];
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role.toLowerCase() as any,
+      full_name: user.fullName || undefined,
+      lycee_id: user.lyceeId || undefined,
+      created_at: user.createdAt?.toISOString() || new Date().toISOString()
+    };
   } catch (error: any) {
     console.error('❌ Erreur lors de la récupération de l\'utilisateur:', error.message);
     throw error;

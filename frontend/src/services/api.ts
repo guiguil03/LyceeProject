@@ -1,5 +1,5 @@
 // Service API pour les appels vers le backend
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface LyceeData {
   nom: string;
@@ -66,7 +66,7 @@ export const api = {
   // Recherche de lycées (API externe)
   async searchLycees(criteria: SearchCriteria): Promise<LyceeData[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/lycees/search`, {
+      const response = await fetch(`${API_BASE_URL}/api/lycees/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,9 +79,9 @@ export const api = {
       }
 
       const data = await response.json();
-      return data.success ? data.data : [];
+      return data.lycees || [];
     } catch (error) {
-      console.error('Erreur lors de la recherche de lycées:', error);
+      console.error('Erreur recherche lycées:', error);
       throw error;
     }
   },
@@ -89,7 +89,7 @@ export const api = {
   // Matching entre entreprises et lycées (API externe)
   async findMatching(criteria: Record<string, unknown>): Promise<Record<string, unknown>> {
     try {
-      const response = await fetch(`${API_BASE_URL}/matching`, {
+      const response = await fetch(`${API_BASE_URL}/api/matching`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,27 +101,29 @@ export const api = {
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Erreur lors du matching:', error);
       throw error;
     }
   },
 
-  // Obtenir les détails d'un lycée (API externe)
+  // Obtenir les détails d'un lycée par ID (API externe)
   async getLyceeDetails(id: string): Promise<LyceeData | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/lycees/${id}`);
+      const response = await fetch(`${API_BASE_URL}/api/lycees/${id}`);
 
       if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.success ? data.data : null;
+      return data.lycee || null;
     } catch (error) {
-      console.error('Erreur lors de la récupération des détails:', error);
+      console.error('Erreur récupération détails lycée:', error);
       throw error;
     }
   },

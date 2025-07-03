@@ -115,7 +115,7 @@ export const authService = {
     try {
       console.log('🔄 Tentative de connexion pour:', loginData.email);
       
-      const data = await apiCall('/auth/login', {
+      const data = await apiCall('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(loginData),
       });
@@ -140,7 +140,7 @@ export const authService = {
     try {
       console.log('🔄 Tentative d\'inscription entreprise pour:', registerData.email);
       
-      const data = await apiCall('/auth/register/entreprise', {
+      const data = await apiCall('/api/auth/register/entreprise', {
         method: 'POST',
         body: JSON.stringify(registerData),
       });
@@ -165,7 +165,7 @@ export const authService = {
     try {
       console.log('🔄 Tentative d\'inscription lycée pour:', registerData.rbdeEmail);
       
-      const data = await apiCall('/auth/register/lycee', {
+      const data = await apiCall('/api/auth/register/lycee', {
         method: 'POST',
         body: JSON.stringify(registerData),
       });
@@ -188,7 +188,7 @@ export const authService = {
   // Récupérer le profil utilisateur
   getProfile: async (): Promise<any> => {
     try {
-      return await apiCall('/auth/profile');
+      return await apiCall('/api/auth/profile');
     } catch (error) {
       console.error('❌ Erreur de récupération du profil:', error);
       throw error;
@@ -198,7 +198,7 @@ export const authService = {
   // Vérifier si le token est valide
   verifyToken: async (): Promise<boolean> => {
     try {
-      await apiCall('/auth/verify');
+      await apiCall('/api/auth/verify');
       return true;
     } catch (error) {
       // Token invalide, supprimer les données stockées
@@ -210,7 +210,7 @@ export const authService = {
   // Déconnexion
   logout: async (): Promise<void> => {
     try {
-      await apiCall('/auth/logout', {
+      await apiCall('/api/auth/logout', {
         method: 'POST',
       });
     } catch (error) {

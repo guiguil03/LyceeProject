@@ -464,8 +464,10 @@ class DemandeServicePrisma {
     // Grouper par mois
     const monthlyCount = new Map<string, number>();
     demandesForMonths.forEach(demande => {
-      const monthStr = demande.dateCreation.toISOString().slice(0, 7); // Format YYYY-MM
-      monthlyCount.set(monthStr, (monthlyCount.get(monthStr) || 0) + 1);
+      if (demande.dateCreation) {
+        const monthStr = demande.dateCreation.toISOString().slice(0, 7); // Format YYYY-MM
+        monthlyCount.set(monthStr, (monthlyCount.get(monthStr) || 0) + 1);
+      }
     });
 
     // Générer tous les mois des 12 derniers mois
