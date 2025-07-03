@@ -1,4 +1,4 @@
-import { PrismaClient } from '../generated/prisma';
+import { PrismaClient } from '@prisma/client';
 
 class PrismaService {
   private static instance: PrismaService;
@@ -52,4 +52,4 @@ class PrismaService {
   }
 }
 
-export default PrismaService; 
+export default PrismaService;

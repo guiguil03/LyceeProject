@@ -13,6 +13,7 @@ RUN npm install
 
 # Copier le code source
 COPY . .
+RUN npx prisma generate
 
 # Exposer le port
 EXPOSE 3001

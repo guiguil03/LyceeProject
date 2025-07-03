@@ -1,5 +1,5 @@
 import PrismaService from './prismaService';
-import { PrismaClient, Demande, DemandeLycee, User, Entreprise, Lycee, Metier, Domaine } from '../generated/prisma';
+import { PrismaClient, Demande, DemandeLycee, User, Entreprise, Lycee, Metier, Domaine } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 interface CreateDemandeRequest {
@@ -544,4 +544,4 @@ class DemandeServicePrisma {
   }
 }
 
-export default DemandeServicePrisma; 
+export default DemandeServicePrisma;
