@@ -188,64 +188,8 @@ export default function HomePage() {
             </div>
           </div>
           
-          <div className="fr-grid-row fr-grid-row--gutters">
-            
-            {/* Pour les entreprises */}
-            <div className="fr-col-12 fr-col-md-6">
-              <div className="fr-card fr-card--no-arrow fr-card--border">
-                <div className="fr-card__body">
-                  <div className="fr-card__content">
-                    <h3 className="fr-card__title">
-                      <span className="fr-icon-building-line fr-mr-1w" aria-hidden="true"></span>
-                      Pour les entreprises
-                    </h3>
-                    <ul className="fr-mb-4w">
-                      <li>Créer des demandes de partenariat</li>
-                      <li>Rechercher des lycées par secteur</li>
-                      <li>Proposer des stages et alternances</li>
-                      <li>Suivre vos collaborations</li>
-                    </ul>
-                    <div className="fr-btns-group">
-                      <button 
-                        className="fr-btn fr-btn--sm fr-btn--icon-left fr-icon-add-line"
-                        onClick={handleCreateDemande}
-                      >
-                        Créer une demande
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Pour les lycées */}
-            <div className="fr-col-12 fr-col-md-6">
-              <div className="fr-card fr-card--no-arrow fr-card--border">
-                <div className="fr-card__body">
-                  <div className="fr-card__content">
-                    <h3 className="fr-card__title">
-                      <span className="fr-icon-school-line fr-mr-1w" aria-hidden="true"></span>
-                      Pour les lycées
-                    </h3>
-                    <ul className="fr-mb-4w">
-                      <li>Consulter les demandes d'entreprises</li>
-                      <li>Gérer votre profil établissement</li>
-                      <li>Proposer vos formations</li>
-                      <li>Développer votre réseau professionnel</li>
-                    </ul>
-                    <div className="fr-btns-group">
-                      <button 
-                        className="fr-btn fr-btn--sm fr-btn--secondary fr-btn--icon-left fr-icon-search-line"
-                        onClick={handleSearch}
-                      >
-                        Voir les demandes
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+         
+          
 
           {/* Fonctionnalités techniques */}
           <div className="fr-grid-row fr-grid-row--gutters fr-mt-6w">
