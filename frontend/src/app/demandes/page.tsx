@@ -179,26 +179,6 @@ export default function DemandesPage() {
     return labels[type] || type;
   };
 
-  const getStatusIcon = (statut: string) => {
-    const icons: Record<string, string> = {
-      'en_attente': 'ri-time-line',
-      'en_cours': 'ri-refresh-line',
-      'acceptee': 'ri-check-line',
-      'refusee': 'ri-close-line'
-    };
-    return icons[statut] || 'ri-question-line';
-  };
-
-  const getPriorityIcon = (priorite: string) => {
-    const icons: Record<string, string> = {
-      'BASSE': 'ri-arrow-down-line',
-      'NORMALE': 'ri-subtract-line',
-      'HAUTE': 'ri-arrow-up-line',
-      'URGENTE': 'ri-alarm-warning-line'
-    };
-    return icons[priorite] || 'ri-subtract-line';
-  };
-
   const getPriorityLabel = (priorite: string) => {
     const labels: Record<string, string> = {
       'BASSE': 'Basse',
@@ -207,21 +187,6 @@ export default function DemandesPage() {
       'URGENTE': 'Urgente'
     };
     return labels[priorite] || priorite;
-  };
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return 'Il y a moins d&apos;1h';
-    } else if (diffInHours < 24) {
-      return `Il y a ${diffInHours}h`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
-    }
   };
 
   if (isLoading) {
@@ -252,12 +217,9 @@ export default function DemandesPage() {
       <div className="fr-grid-row fr-grid-row--gutters">
         <div className="fr-col-12">
           <div className="fr-mb-4w">
-            <h1 className="fr-h1">
-              <i className="ri-mail-send-line fr-mr-2w"></i>
-              Contacter les lycées
-            </h1>
+            <h1 className="fr-h1">Mes demandes de partenariat</h1>
             <p className="fr-text--lead">
-              Exprimez votre intérêt pour des partenariats avec les lycées professionnels
+              Gérez vos demandes de partenariat avec les lycées professionnels
             </p>
           </div>
 
@@ -277,13 +239,13 @@ export default function DemandesPage() {
           {/* Actions */}
           <div className="fr-btns-group fr-mb-6w">
             <button
-              className="fr-btn fr-btn--icon-left ri-add-line"
+              className="fr-btn fr-btn--icon-left fr-icon-add-line"
               onClick={() => setShowCreateForm(!showCreateForm)}
             >
               {showCreateForm ? 'Annuler' : 'Nouvelle demande'}
             </button>
             <button
-              className="fr-btn fr-btn--secondary fr-btn--icon-left ri-refresh-line"
+              className="fr-btn fr-btn--secondary fr-btn--icon-left fr-icon-refresh-line"
               onClick={loadDemandes}
               disabled={loading}
             >
@@ -293,12 +255,11 @@ export default function DemandesPage() {
 
           {/* Formulaire de création */}
           {showCreateForm && (
-            <div className="fr-card fr-card--shadow fr-mb-6w" style={{ border: '2px solid #000091' }}>
+            <div className="fr-card fr-mb-6w">
               <div className="fr-card__body">
                 <div className="fr-card__content">
                   <h3 className="fr-card__title">
-                    <i className="ri-mail-send-line fr-mr-2w"></i>
-                    Écrire à un lycée
+                    Nouvelle demande de partenariat
                   </h3>
                   
                   {/* Section d'aide */}
@@ -479,7 +440,7 @@ export default function DemandesPage() {
                       </button>
                       <button
                         type="submit"
-                        className="fr-btn fr-btn--icon-left ri-send-plane-line"
+                        className="fr-btn"
                         disabled={!formData.lycee_uai || !formData.titre || !formData.description}
                       >
                         Envoyer la demande
@@ -492,164 +453,77 @@ export default function DemandesPage() {
           )}
 
           {/* Liste des demandes */}
-          <div className="fr-card fr-card--shadow">
+          <div className="fr-card">
             <div className="fr-card__body">
               <div className="fr-card__content">
-                <div className="fr-grid-row fr-grid-row--gutters fr-grid-row--middle fr-mb-4w">
-                  <div className="fr-col">
-                    <h2 className="fr-card__title fr-mb-0">
-                      <i className="ri-file-list-3-line fr-mr-2w"></i>
-                      Mes demandes envoyées
-                    </h2>
-                    {demandes.length > 0 && (
-                      <p className="fr-text--sm fr-text--color-grey fr-mb-0">
-                        {demandes.length} demande{demandes.length > 1 ? 's' : ''} au total
-                      </p>
-                    )}
-                  </div>
+                <h2 className="fr-card__title">
+                  Mes demandes envoyées
                   {demandes.length > 0 && (
-                    <div className="fr-col-auto">
-                      <div className="fr-btns-group fr-btns-group--sm">
-                        <button 
-                          className="fr-btn fr-btn--sm fr-btn--tertiary fr-btn--icon-left ri-filter-line"
-                          onClick={() => {/* TODO: Ajouter filtres */}}
-                        >
-                          Filtrer
-                        </button>
-                        <button 
-                          className="fr-btn fr-btn--sm fr-btn--tertiary fr-btn--icon-left ri-download-line"
-                          onClick={() => {/* TODO: Ajouter export */}}
-                        >
-                          Exporter
-                        </button>
-                      </div>
-                    </div>
+                    <span className="fr-text--sm fr-text--color-grey fr-ml-2w">
+                      ({demandes.length} demande{demandes.length > 1 ? 's' : ''})
+                    </span>
                   )}
-                </div>
+                </h2>
 
                 {loading ? (
                   <div className="fr-text--center fr-py-4w">
                     <p>Chargement des demandes...</p>
                   </div>
-                ) : demandes.length === 0 ? (
-                  <div className="fr-card fr-card--no-border" style={{ backgroundColor: '#f6f6f6' }}>
-                    <div className="fr-card__body">
-                      <div className="fr-card__content fr-text--center fr-py-6w">
-                        <div className="fr-mb-4w">
-                          <i className="ri-mail-send-line" style={{ fontSize: '4rem', color: '#666', opacity: 0.5 }}></i>
-                        </div>
-                        <h3 className="fr-h5 fr-mb-2w">Aucune demande envoyée</h3>
-                        <p className="fr-text--lg fr-mb-4w fr-text--color-grey">
-                          Vous n&apos;avez pas encore contacté de lycées professionnels.
-                        </p>
-                        <div className="fr-callout fr-callout--blue-ecume fr-callout--sm">
-                          <p className="fr-callout__text">
-                            <strong>💡 Pour commencer :</strong><br />
-                                                         Cliquez sur &quot;Nouvelle demande&quot; pour contacter un lycée et proposer un partenariat !
-                          </p>
-                        </div>
-                        <div className="fr-mt-4w">
-                          <button
-                            className="fr-btn fr-btn--lg fr-btn--icon-left ri-add-line"
-                            onClick={() => setShowCreateForm(true)}
-                          >
-                            Créer ma première demande
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                                ) : demandes.length === 0 ? (
+                  <div className="fr-text--center fr-py-6w">
+                    <h3 className="fr-h5">Aucune demande envoyée</h3>
+                    <p className="fr-mb-4w">
+                      Commencez par créer votre première demande pour contacter un lycée !
+                    </p>
+                    <button
+                      className="fr-btn fr-btn--icon-left fr-icon-add-line"
+                      onClick={() => setShowCreateForm(true)}
+                    >
+                      Nouvelle demande
+                    </button>
                   </div>
                 ) : (
-                  <div className="fr-table fr-table--bordered">
-                    <div className="fr-table__wrapper">
-                      <div className="fr-table__container">
-                        <div className="fr-table__content">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th scope="col" style={{ width: '25%' }}>
-                                  <i className="ri-school-line fr-mr-1w"></i>
-                                  Lycée destinataire
-                                </th>
-                                <th scope="col" style={{ width: '25%' }}>
-                                  <i className="ri-mail-line fr-mr-1w"></i>
-                                  Objet de la demande
-                                </th>
-                                <th scope="col" style={{ width: '15%' }}>
-                                  <i className="ri-handshake-line fr-mr-1w"></i>
-                                  Type
-                                </th>
-                                <th scope="col" style={{ width: '12%' }}>
-                                  <i className="ri-pulse-line fr-mr-1w"></i>
-                                  Statut
-                                </th>
-                                <th scope="col" style={{ width: '12%' }}>
-                                  <i className="ri-flag-line fr-mr-1w"></i>
-                                  Priorité
-                                </th>
-                                <th scope="col" style={{ width: '11%' }}>
-                                  <i className="ri-calendar-line fr-mr-1w"></i>
-                                  Date
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {demandes.map((demande) => (
-                                <tr key={demande.id}>
-                                  <td>
-                                    <div className="fr-mb-1w">
-                                      <strong className="fr-text--md">
-                                        {demande.lycee_nom || 'Lycée non spécifié'}
-                                      </strong>
-                                    </div>
-                                    <small className="fr-text--xs fr-text--color-grey">
-                                      <i className="ri-map-pin-line fr-mr-1v"></i>
-                                      Contact établi
-                                    </small>
-                                  </td>
-                                  <td>
-                                    <div className="fr-text--md fr-mb-1v">
-                                      {demande.titre}
-                                    </div>
-                                    {demande.description && (
-                                      <small className="fr-text--xs fr-text--color-grey">
-                                        {demande.description.substring(0, 60)}
-                                        {demande.description.length > 60 && '...'}
-                                      </small>
-                                    )}
-                                  </td>
-                                  <td>
-                                    <span className="fr-badge fr-badge--blue-ecume fr-badge--sm">
-                                      {getTypeLabel(demande.type_partenariat || '')}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className={`${getStatusBadge(demande.statut)} fr-badge--sm`}>
-                                      <i className={`${getStatusIcon(demande.statut)} fr-mr-1v`}></i>
-                                      {getStatusLabel(demande.statut)}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className={`${getPriorityBadge(demande.priorite || 'NORMALE')} fr-badge--sm`}>
-                                      <i className={`${getPriorityIcon(demande.priorite || 'NORMALE')} fr-mr-1v`}></i>
-                                      {getPriorityLabel(demande.priorite || 'NORMALE')}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <div className="fr-text--sm fr-mb-1v">
-                                      {new Date(demande.date_creation).toLocaleDateString('fr-FR')}
-                                    </div>
-                                    <small className="fr-text--xs fr-text--color-grey">
-                                      {getTimeAgo(demande.date_creation)}
-                                    </small>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="fr-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Lycée</th>
+                          <th>Objet</th>
+                          <th>Type</th>
+                          <th>Statut</th>
+                          <th>Priorité</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {demandes.map((demande) => (
+                          <tr key={demande.id}>
+                            <td>
+                              <strong>{demande.lycee_nom || 'Lycée non spécifié'}</strong>
+                            </td>
+                            <td>{demande.titre}</td>
+                            <td>
+                              <span className="fr-badge fr-badge--blue-ecume">
+                                {getTypeLabel(demande.type_partenariat || '')}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={getStatusBadge(demande.statut)}>
+                                {getStatusLabel(demande.statut)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={getPriorityBadge(demande.priorite || 'NORMALE')}>
+                                {getPriorityLabel(demande.priorite || 'NORMALE')}
+                              </span>
+                            </td>
+                            <td>
+                              {new Date(demande.date_creation).toLocaleDateString('fr-FR')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
