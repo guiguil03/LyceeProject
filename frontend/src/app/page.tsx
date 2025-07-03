@@ -1,18 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function HomePage() {
   const router = useRouter();
-  const [selectedProfile, setSelectedProfile] = useState<'entreprise' | 'lycee' | null>(null);
   const { isAuthenticated, user, logout } = useAuth();
-
-  const handleProfileSelection = (profile: 'entreprise' | 'lycee') => {
-    setSelectedProfile(profile);
-    router.push(`/auth?type=${profile}`);
-  };
 
   const handleCreateDemande = () => {
     router.push('/demandes');
@@ -56,7 +50,7 @@ export default function HomePage() {
                    <h3 className="fr-h3 fr-mb-4w">Je suis :</h3>
                    <div className="fr-grid-row fr-grid-row--gutters">
                      <div className="fr-col-12 fr-col-md-6">
-                       <div className={`fr-card fr-card--horizontal ${selectedProfile === 'entreprise' ? 'fr-card--selected' : ''}`}>
+                       <div className="fr-card fr-card--horizontal">
                          <div className="fr-card__body">
                            <div className="fr-card__content">
                              <h4 className="fr-card__title">
@@ -69,7 +63,7 @@ export default function HomePage() {
                              <div className="fr-card__footer">
                                <button 
                                  className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                 onClick={() => handleProfileSelection('entreprise')}
+                                 onClick={() => router.push('/auth?type=entreprise')}
                                >
                                  Se connecter
                                </button>
@@ -80,7 +74,7 @@ export default function HomePage() {
                      </div>
                      
                      <div className="fr-col-12 fr-col-md-6">
-                       <div className={`fr-card fr-card--horizontal ${selectedProfile === 'lycee' ? 'fr-card--selected' : ''}`}>
+                       <div className="fr-card fr-card--horizontal">
                          <div className="fr-card__body">
                            <div className="fr-card__content">
                              <h4 className="fr-card__title">
@@ -93,7 +87,7 @@ export default function HomePage() {
                              <div className="fr-card__footer">
                                <button 
                                  className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-login-box-line"
-                                 onClick={() => handleProfileSelection('lycee')}
+                                 onClick={() => router.push('/auth?type=lycee')}
                                >
                                  Se connecter
                                </button>
@@ -119,23 +113,44 @@ export default function HomePage() {
                    
                    <div className="fr-btns-group fr-btns-group--center fr-mt-4w">
                      <button 
-                       onClick={handleCreateDemande}
-                       className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-add-line"
-                     >
-                       Créer une demande
-                     </button>
-                     <button 
                        onClick={handleDashboard}
-                       className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
+                       className="fr-btn fr-btn--lg fr-btn--icon-left fr-icon-dashboard-line"
                      >
                        Mon tableau de bord
                      </button>
-                     <button 
-                       onClick={handleSearch}
-                       className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
-                     >
-                       Rechercher
-                     </button>
+                     
+                     {user?.type === 'entreprise' ? (
+                       <>
+                         <button 
+                           onClick={handleCreateDemande}
+                           className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-add-line"
+                         >
+                           Créer une demande
+                         </button>
+                         <button 
+                           onClick={handleSearch}
+                           className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-search-line"
+                         >
+                           Rechercher lycées
+                         </button>
+                       </>
+                     ) : (
+                       <>
+                         <button 
+                           onClick={() => router.push('/lycee')}
+                           className="fr-btn fr-btn--secondary fr-btn--lg fr-btn--icon-left fr-icon-school-line"
+                         >
+                           Mon lycée
+                         </button>
+                         <button 
+                           onClick={() => router.push('/lycee/profil')}
+                           className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-settings-5-line"
+                         >
+                           Gérer mon profil
+                         </button>
+                       </>
+                     )}
+                     
                      <button 
                        onClick={logout}
                        className="fr-btn fr-btn--tertiary fr-btn--lg fr-btn--icon-left fr-icon-logout-box-r-line"
@@ -154,6 +169,7 @@ export default function HomePage() {
                   Découvrir la plateforme
                 </a>
               </div>
+
             </div>
           </div>
         </div>

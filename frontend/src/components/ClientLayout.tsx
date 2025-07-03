@@ -3,7 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
+import CompactQuickActions from './CompactQuickActions';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -11,6 +13,7 @@ interface ClientLayoutProps {
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const pathname = usePathname();
 
   if (isLoading) {
     return (
@@ -42,14 +45,6 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                       Française
                     </p>
                   </div>
-                  <div className="fr-header__operator">
-                    <img
-                      className="fr-responsive-img"
-                      style={{ maxWidth: '3.5rem' }}
-                      src="/favicon.ico"
-                      alt="Logo"
-                    />
-                  </div>
                 </div>
                 <div className="fr-header__service">
                   <Link href="/" title="Accueil - LycéeConnect">
@@ -70,6 +65,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           </div>
         </div>
       </header>
+
+      {/* Actions rapides pour utilisateurs connectés (sauf page d'accueil) */}
+      {isAuthenticated && pathname !== '/' && <CompactQuickActions />}
 
       <main role="main">
         {children}

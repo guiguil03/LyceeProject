@@ -19,11 +19,36 @@ interface MatchingCriteria {
   };
 }
 
+interface LyceeResult {
+  lycee: {
+    nom_etablissement: string;
+    libelle_commune: string;
+    libelle_departement: string;
+    statut_public_prive: string;
+    formations?: string[];
+    telephone?: string;
+    mail?: string;
+    web?: string;
+  };
+  distance?: number;
+}
+
+interface EntrepriseInfo {
+  denominationSociale: string;
+  siret: string;
+  secteurActivite: string;
+  adresse: {
+    commune: string;
+    departement: string;
+    codePostal: string;
+  };
+}
+
 const MatchingLycees: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<any>(null);
-  const [entrepriseInfo, setEntrepriseInfo] = useState<any>(null);
+  const [results, setResults] = useState<LyceeResult[] | null>(null);
+  const [entrepriseInfo, setEntrepriseInfo] = useState<EntrepriseInfo | null>(null);
 
   const [criteria, setCriteria] = useState<MatchingCriteria>({
     entreprise: {
@@ -485,135 +510,80 @@ const MatchingLycees: React.FC = () => {
         </div>
       )}
 
-      {/* Affichage des résultats */}
+      {/* Affichage des résultats sur carte */}
       {results && results.length > 0 && (
         <div className="fr-container fr-mt-6w">
           <div className="fr-alert fr-alert--success fr-mb-4w">
             <h3 className="fr-alert__title">Résultats de recherche</h3>
             <p>
-              {results.length} lycée(s) trouvé(s) correspondant à vos critères
+              {results.length} lycée(s) trouvé(s) correspondant à vos critères - Affichage sur carte interactive
             </p>
           </div>
 
-          <div className="fr-grid-row fr-grid-row--gutters">
-            {results.map((match: any, index: number) => {
-              const lycee = match.lycee;
-              return (
-                <div key={index} className="fr-col-12 fr-col-md-6 fr-col-lg-4">
-                  <div className="fr-card fr-card--no-arrow">
-                    <div className="fr-card__body">
-                      <div className="fr-card__content">
-                        <h4 className="fr-card__title">
-                          {lycee.nom_etablissement}
-                        </h4>
-
-                        <ul className="fr-list fr-text--sm">
-                          <li>
-                            <span
-                              className="fr-icon-map-pin-2-line fr-mr-1w"
-                              aria-hidden="true"
-                            ></span>
-                            {lycee.libelle_commune} ({lycee.libelle_departement}
-                            )
-                          </li>
-
-                          <li>
-                            <span
-                              className="fr-icon-government-line fr-mr-1w"
-                              aria-hidden="true"
-                            ></span>
-                            <span className="fr-text--capitalize">
-                              {lycee.statut_public_prive}
-                            </span>
-                          </li>
-
-                          {match.distance && (
-                            <li>
-                              <span
-                                className="fr-icon-road-map-line fr-mr-1w"
-                                aria-hidden="true"
-                              ></span>
-                              {Math.round(match.distance)} km
-                            </li>
-                          )}
+          {/* Carte interactive des lycées professionnels */}
+          <div className="fr-card fr-card--no-arrow">
+            <div className="fr-card__body">
+              <div className="fr-card__content">
+                <h4 className="fr-card__title">
+                  <span className="fr-icon-map-pin-2-line fr-mr-2w" aria-hidden="true"></span>
+                  Localisation des lycées professionnels
+                </h4>
+                <p className="fr-card__desc fr-mb-4w">
+                  Carte interactive des lycées professionnels français - Données officielles du Ministère de l&apos;Éducation nationale
+                </p>
+                
+                <div style={{ position: 'relative', height: '600px', width: '100%', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <iframe
+                    src="https://data.education.gouv.fr/explore/embed/dataset/fr-en-annuaire_bde_lycees_pro/carte/?disjunctive.code_postal_uai&disjunctive.localite_acheminement_uai&disjunctive.libelle_commune&disjunctive.libelle_departement&disjunctive.libelle_region&disjunctive.libelle_academie&sort=numero_uai"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 'none' }}
+                    title="Carte des lycées professionnels français"
+                    allowFullScreen
+                  />
+                </div>
+                
+                <div className="fr-mt-4w">
+                  <div className="fr-grid-row fr-grid-row--gutters">
+                    <div className="fr-col-12 fr-col-md-6">
+                      <div className="fr-callout fr-callout--blue-france">
+                        <h5 className="fr-callout__title">
+                          <span className="fr-icon-information-line fr-mr-1w" aria-hidden="true"></span>
+                          Fonctionnalités de la carte
+                        </h5>
+                        <ul className="fr-list">
+                          <li>Zoom et navigation libre</li>
+                          <li>Filtres par région, département, commune</li>
+                          <li>Informations détaillées par établissement</li>
+                          <li>Recherche par nom d&apos;établissement</li>
                         </ul>
-
-                        {/* Diplômes disponibles */}
-                        {lycee.formations && lycee.formations.length > 0 && (
-                          <div className="fr-mt-2w">
-                            <p className="fr-text--xs fr-text--bold fr-mb-1w">
-                              <span
-                                className="fr-icon-award-line fr-mr-1w"
-                                aria-hidden="true"
-                              ></span>
-                              Diplômes préparés ({lycee.formations.length})
-                            </p>
-                            <div className="fr-tags-group">
-                              {lycee.formations
-                                .slice(0, 2)
-                                .map((formation: string, idx: number) => (
-                                  <span key={idx} className="fr-tag fr-tag--sm">
-                                    {formation.length > 25
-                                      ? formation.substring(0, 25) + "..."
-                                      : formation}
-                                  </span>
-                                ))}
-                              {lycee.formations.length > 2 && (
-                                <span className="fr-tag fr-tag--sm">
-                                  +{lycee.formations.length - 2} autres
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Contact */}
-                        {(lycee.telephone || lycee.mail || lycee.web) && (
-                          <div className="fr-mt-3w fr-pt-2w fr-border-top">
-                            {lycee.telephone && (
-                              <p className="fr-text--xs fr-mb-1v">
-                                <span
-                                  className="fr-icon-phone-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                {lycee.telephone}
-                              </p>
-                            )}
-                            {lycee.mail && (
-                              <p className="fr-text--xs fr-mb-1v">
-                                <span
-                                  className="fr-icon-mail-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                <span className="fr-text--truncate">
-                                  {lycee.mail}
-                                </span>
-                              </p>
-                            )}
-                            {lycee.web && (
-                              <p className="fr-text--xs">
-                                <span
-                                  className="fr-icon-external-link-line fr-mr-1w"
-                                  aria-hidden="true"
-                                ></span>
-                                <a
-                                  href={lycee.web}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="fr-link fr-link--icon-right fr-icon-external-link-line"
-                                >
-                                  Site web
-                                </a>
-                              </p>
-                            )}
-                          </div>
-                        )}
+                      </div>
+                    </div>
+                    <div className="fr-col-12 fr-col-md-6">
+                      <div className="fr-callout fr-callout--green-tilleul-verveine">
+                        <h5 className="fr-callout__title">
+                          <span className="fr-icon-award-line fr-mr-1w" aria-hidden="true"></span>
+                          Données officielles
+                        </h5>
+                        <p className="fr-text--sm">
+                          Cette carte utilise les données officielles de l&apos;annuaire 
+                          des lycées professionnels du Ministère de l&apos;Éducation nationale, 
+                          mise à jour régulièrement.
+                        </p>
+                        <a 
+                          href="https://data.education.gouv.fr/explore/dataset/fr-en-annuaire_bde_lycees_pro/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="fr-link fr-link--icon-right fr-icon-external-link-line"
+                        >
+                          Accéder à la source des données
+                        </a>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -625,9 +595,34 @@ const MatchingLycees: React.FC = () => {
             <h3 className="fr-alert__title">Aucun lycée trouvé</h3>
             <p>
               Aucun établissement ne correspond à vos critères de recherche.
-              Essayez de modifier vos critères ou d&apos;élargir la zone
-              géographique.
+              Consultez la carte ci-dessous pour explorer tous les lycées professionnels disponibles.
             </p>
+          </div>
+          
+          {/* Carte même sans résultats spécifiques */}
+          <div className="fr-card fr-card--no-arrow fr-mt-4w">
+            <div className="fr-card__body">
+              <div className="fr-card__content">
+                <h4 className="fr-card__title">
+                  <span className="fr-icon-map-pin-2-line fr-mr-2w" aria-hidden="true"></span>
+                  Explorer tous les lycées professionnels
+                </h4>
+                <p className="fr-card__desc fr-mb-4w">
+                  Utilisez la carte interactive pour découvrir l&apos;ensemble des lycées professionnels français
+                </p>
+                
+                <div style={{ position: 'relative', height: '600px', width: '100%', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <iframe
+                    src="https://data.education.gouv.fr/explore/embed/dataset/fr-en-annuaire_bde_lycees_pro/carte/?disjunctive.code_postal_uai&disjunctive.localite_acheminement_uai&disjunctive.libelle_commune&disjunctive.libelle_departement&disjunctive.libelle_region&disjunctive.libelle_academie&sort=numero_uai"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 'none' }}
+                    title="Carte des lycées professionnels français"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
