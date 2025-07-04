@@ -71,26 +71,17 @@ export default function CompactQuickActions() {
       // Pour les lycées
       return [
         {
-          id: "dashboard",
-          label: "Tableau de bord",
-          shortLabel: "Dashboard",
-          icon: "fr-icon-dashboard-line",
-          path: "/lycee/dashboard",
-          description: "Accédez à votre tableau de bord lycée",
-          color: "primary",
-        },
-        {
           id: "mon-lycee",
-          label: "Mon établissement",
+          label: "Établissement",
           shortLabel: "Mon lycée",
-          icon: "fr-icon-school-line",
+          icon: "fr-icon-hotel-line",
           path: "/lycee",
           description: "Gérer les informations de votre lycée",
           color: "info",
         },
         {
           id: "profil-lycee",
-          label: "Gérer mon profil",
+          label: "Profil",
           shortLabel: "Profil",
           icon: "fr-icon-settings-5-line",
           path: "/lycee/profil",
@@ -99,10 +90,10 @@ export default function CompactQuickActions() {
         },
         {
           id: "demandes-recues",
-          label: "Demandes reçues",
+          label: "Demandes",
           shortLabel: "Demandes",
           icon: "fr-icon-mail-line",
-          path: "/lycee/dashboard?tab=demandes",
+          path: "/lycee/demandes",
           description: "Consulter les demandes d&apos;entreprises",
           color: "warning",
         },
@@ -140,13 +131,7 @@ export default function CompactQuickActions() {
         <div className="fr-container">
           <div className="fr-grid-row fr-grid-row--middle">
             <div className="fr-col-auto fr-mr-3w">
-              <div className="fr-text--sm fr-text--bold">
-                <span
-                  className="fr-icon-lightning-line fr-mr-1w"
-                  aria-hidden="true"
-                ></span>
-                Actions rapides
-              </div>
+              <div className="fr-text--sm fr-text--bold">Actions rapides</div>
             </div>
             <div className="fr-col">
               <div className="fr-btns-group fr-btns-group--sm">
@@ -158,7 +143,11 @@ export default function CompactQuickActions() {
                       action.color
                     )} fr-btn--icon-left ${action.icon}`}
                     title={action.description}
-                    style={{ minWidth: "120px" }}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
                   >
                     <span className="fr-hidden fr-unhidden-md">
                       {action.label}

@@ -16,25 +16,12 @@ export default function HomePage() {
     router.push("/search");
   };
 
-  const handleDashboard = () => {
-    router.push("/dashboard");
-  };
-
   // Actions rapides pour utilisateurs connectés
   const getQuickActions = () => {
     if (!isAuthenticated || !user) return [];
 
     if (user.type === "entreprise") {
       return [
-        {
-          id: "dashboard",
-          title: "Tableau de bord",
-          description:
-            "Accédez à votre espace personnel et consultez vos statistiques",
-          icon: "fr-icon-dashboard-line",
-          color: "primary",
-          action: handleDashboard,
-        },
         {
           id: "create",
           title: "Nouvelle demande",
@@ -57,7 +44,7 @@ export default function HomePage() {
           id: "profils",
           title: "Profils lycées",
           description: "Consultez les profils détaillés des établissements",
-          icon: "fr-icon-building-line",
+          icon: "fr-icon-book-2-line",
           color: "secondary",
           action: () => router.push("/lycees/profils"),
         },
@@ -65,29 +52,12 @@ export default function HomePage() {
     } else {
       return [
         {
-          id: "dashboard",
-          title: "Tableau de bord",
-          description: "Accédez à votre espace lycée et gérez vos informations",
-          icon: "fr-icon-dashboard-line",
-          color: "primary",
-          action: () => router.push("/lycee/dashboard"),
-        },
-        {
           id: "lycee",
           title: "Mon établissement",
           description: "Gérez les informations de votre lycée professionnel",
-          icon: "fr-icon-school-line",
+          icon: "fr-icon-hotel-line",
           color: "info",
           action: () => router.push("/lycee"),
-        },
-        {
-          id: "profil",
-          title: "Gérer mon profil",
-          description:
-            "Modifiez les détails et spécialités de votre établissement",
-          icon: "fr-icon-settings-5-line",
-          color: "secondary",
-          action: () => router.push("/lycee/profil"),
         },
         {
           id: "demandes",
@@ -95,7 +65,7 @@ export default function HomePage() {
           description: "Consultez et gérez les demandes d&apos;entreprises",
           icon: "fr-icon-mail-line",
           color: "warning",
-          action: () => router.push("/demandes"),
+          action: () => router.push("/lycee/demandes"),
         },
       ];
     }
@@ -251,13 +221,7 @@ export default function HomePage() {
 
                   {/* Actions rapides avec descriptions */}
                   <div className="fr-mt-6w">
-                    <h4 className="fr-h4 fr-mb-4w">
-                      <span
-                        className="fr-icon-lightning-line fr-mr-2w"
-                        aria-hidden="true"
-                      ></span>
-                      Actions rapides
-                    </h4>
+                    <h4 className="fr-h4 fr-mb-4w"> Actions rapides</h4>
 
                     <div className="fr-grid-row fr-grid-row--gutters">
                       {quickActions.map((action) => (
