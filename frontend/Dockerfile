@@ -14,8 +14,8 @@ RUN npm install
 COPY . .
 
 
-# Exposer le port 5173 (port par défaut de Vite)
-EXPOSE 5173
+# Exposer le port 3000 (port par défaut de Next.js)
+EXPOSE 3000
 
 # Démarrer le serveur de développement
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev"]

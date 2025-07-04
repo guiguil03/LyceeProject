@@ -1,0 +1,29 @@
+@import "@gouvfr/dsfr/dist/dsfr.min.css";
+@import "@gouvfr/dsfr/dist/utility/utility.min.css";
+@import "@gouvfr/dsfr/dist/core/core.min.css";
+@import "@gouvfr/dsfr/dist/component/component.min.css";
+@import "@gouvfr/dsfr/dist/scheme/scheme.min.css";
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #161616;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Marianne", Arial, sans-serif;
+}
+
+/* Override DSFR pour certains composants si nécessaire */
+.dsfr-custom {
+  font-family: "Marianne", Arial, sans-serif;
+}

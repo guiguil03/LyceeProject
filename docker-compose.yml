@@ -8,10 +8,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/
     networks:
       - lyceeproject-network
     restart: unless-stopped
@@ -23,6 +23,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      FRONTEND_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:password@database:5432/lyceeproject
       DB_HOST: database
       DB_PORT: 5432
       DB_NAME: lyceeproject
@@ -40,21 +42,25 @@ services:
       - ./backend:/app
       - /app/node_modules
 
-  # Frontend React/Vite avec Nginx
+  # Frontend Next.js
   frontend:
     build: ./frontend
     container_name: lyceeproject-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
-      - "5173:5173"
+      - "3000:3000"
     depends_on:
       - backend
     networks:
       - lyceeproject-network
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:
 
 networks:
   lyceeproject-network:
-    driver: bridge 
+    driver: bridge
