@@ -1,0 +1,28 @@
+{
+  "name": "lycee-project",
+  "version": "1.0.0",
+  "description": "Plateforme de partenariat entre entreprises et lycées professionnels",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run start",
+    "lint": "cd frontend && npm run lint",
+    "dev:backend": "cd backend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "keywords": [
+    "education",
+    "partnership",
+    "lycee",
+    "entreprise"
+  ],
+  "author": "Guillaume",
+  "license": "MIT"
+} 
